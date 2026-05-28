@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Citizen: {{ object.get_full_name }}{% else %}Register New Citizen{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white py-3">
+                <h4 class="mb-0">
+                    {% if object %}Edit Citizen Record / Modifier la Fiche{% else %}Register New Citizen / Enregistrer un Citoyen{% endif %}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.first_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.last_name|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.dob|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.gender|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.national_id|as_crispy_field }}
+                            <div class="text-muted small mb-3">
+                                <strong>NIC Required:</strong> Only required for age 18 and above. Must be blank for under-18.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.photo|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.father|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.mother|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {% if user.is_super_admin %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.subdivision|as_crispy_field }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div style="display:none;">
+                            {{ form.subdivision }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a href="{% if object %}{% url 'registry:citizen_detail' object.pk %}{% else %}{% url 'registry:citizen_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success px-4 py-2">Save Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

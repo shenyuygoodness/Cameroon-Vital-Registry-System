@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - CLVRS{% endblock %}
+
+{% block content %}
+{% load i18n %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>{% trans "Welcome back" %}, {{ user.first_name|default:user.username }}!</h2>
+        <p class="text-muted">
+            {% trans "Role" %}: <strong>{{ user.get_role_display }}</strong> 
+            {% if user.subdivision %} | {% trans "Jurisdiction" %}: <strong>{{ user.subdivision.name }} {% trans "Subdivision" %}</strong>{% endif %}
+            {% if user.region %} | {% trans "Region" %}: <strong>{{ user.region.name }}</strong>{% endif %}
+            {% if user.hospital_name %} | {% trans "Facility" %}: <strong>{{ user.hospital_name }}</strong>{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 1. SUPER ADMIN / COUNCIL OFFICER / REGIONAL ADMIN KPI CARDS -->
+<!-- ========================================== -->
+{% if user.is_super_admin or user.is_council_officer or user.is_regional_admin %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card kpi-card-green">
+            <div class="kpi-title">{% trans "Registered Citizens" %}</div>
+            <div class="kpi-number">{{ total_citizens|default:"0" }}</div>
+            <div class="small">{% trans "Alive and Deceased" %}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card kpi-card-yellow">
+            <div class="kpi-title">{% trans "Pending Births" %}</div>
+            <div class="kpi-number">{{ total_births_pending|default:"0" }}</div>
+            <div class="small">{% trans "Needs Confirmation" %}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card kpi-card-red">
+            <div class="kpi-title">{% trans "Pending Deaths" %}</div>
+            <div class="kpi-number">{{ total_deaths_pending|default:"0" }}</div>
+            <div class="small">{% trans "Needs Confirmation" %}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card kpi-card-blue">
+            <div class="kpi-title">{% trans "Total Households" %}</div>
+            <div class="kpi-number">{{ total_households|default:"0" }}</div>
+            <div class="small">{% trans "Registered Families" %}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ========================================== -->
+<!-- 2. REGIONAL ADMIN VIEW (Aggregates Only) -->
+<!-- ========================================== -->
+{% if user.is_regional_admin %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Regional Admin Actions</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a href="{% url 'registry:user_management' %}" class="btn btn-success">User Management (Provision Accounts)</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Subdivision Distribution in {{ region.name }} Region</div>
+            <div class="card-body">
+                {% if chart_labels %}
+                    <canvas id="subdivisionChart" style="max-height: 350px;"></canvas>
+                {% else %}
+                    <p class="text-center text-muted py-5">No subdivision data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Regional Registry Notice</div>
+            <div class="card-body">
+                <h5>Privacy & Compliance Enforced</h5>
+                <p>As a Regional Administrator, you have access to aggregated statistics and metrics for the <strong>{{ region.name }}</strong> region to assess birth/death rates and demographics.</p>
+                <p class="text-warning"><strong>Note:</strong> Under Cameroonian data privacy rules, individual records, certificates, and pending declaration workflows are restricted to Local Subdivision Officers.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ========================================== -->
+<!-- 3. SUPER ADMIN / COUNCIL OFFICER VIEW -->
+<!-- ========================================== -->
+{% if user.is_super_admin or user.is_council_officer %}
+<div class="row">
+    <!-- Quick actions -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Subdivision Actions</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a href="{% url 'registry:citizen_create' %}" class="btn btn-primary">Register New Citizen</a>
+                <a href="{% url 'registry:pending_list' %}" class="btn btn-warning text-dark position-relative">
+                    Review Pending Declarations
+                    {% if total_births_pending or total_deaths_pending %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ total_births_pending|add:total_deaths_pending }}
+                        </span>
+                    {% endif %}
+                </a>
+                <a href="{% url 'registry:bulk_import' %}" class="btn btn-outline-primary">Bulk Excel Upload</a>
+                <a href="{% url 'registry:export_csv' %}" class="btn btn-outline-secondary">Export Citizens (CSV)</a>
+                {% if user.is_super_admin %}
+                    <a href="{% url 'registry:user_management' %}" class="btn btn-success">User Management</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Listings -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">Pending Birth Declarations</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dec #</th>
+                                <th>Child Name</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dec in pending_births %}
+                                <tr>
+                                    <td>{{ dec.declaration_number }}</td>
+                                    <td>
+                                        {% if dec.child_first_name or dec.child_last_name %}
+                                            {{ dec.child_first_name }} {{ dec.child_last_name }}
+                                        {% else %}
+                                            <span class="text-muted italic">Undecided</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ dec.child_dob }}</td>
+                                    <td>
+                                        <a href="{% url 'registry:pending_list' %}" class="btn btn-sm btn-outline-primary">Review</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No pending birth declarations.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">Pending Death Declarations</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dec #</th>
+                                <th>Citizen</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dec in pending_deaths %}
+                                <tr>
+                                    <td>{{ dec.declaration_number }}</td>
+                                    <td>{{ dec.citizen.get_full_name }}</td>
+                                    <td>{{ dec.death_date }}</td>
+                                    <td>
+                                        <a href="{% url 'registry:pending_list' %}" class="btn btn-sm btn-outline-primary">Review</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No pending death declarations.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Subdivision Chart (only for super admin) -->
+    {% if user.is_super_admin %}
+    <div class="col-md-12 mt-3">
+        <div class="card">
+            <div class="card-header bg-dark text-white">Subdivision Demographics (Top 5)</div>
+            <div class="card-body">
+                <canvas id="subdivisionChart" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+
+<!-- ========================================== -->
+<!-- 4. HOSPITAL STAFF VIEW -->
+<!-- ========================================== -->
+{% if user.is_hospital_staff %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card text-center bg-light border-0 py-4 shadow-sm">
+            <div class="card-body">
+                <h4>Facility Registration Portal</h4>
+                <p class="text-muted">Directly declare vital events occurring at <strong>{{ hospital_name }}</strong>.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'registry:birth_create' %}" class="btn btn-lg btn-success">Declare Live Birth</a>
+                    <a href="{% url 'registry:death_create' %}" class="btn btn-lg btn-danger">Declare Death</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">Your Recent Birth Declarations</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dec #</th>
+                                <th>Child Name</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dec in my_birth_declarations %}
+                                <tr>
+                                    <td>{{ dec.declaration_number }}</td>
+                                    <td>
+                                        {% if dec.child_first_name or dec.child_last_name %}
+                                            {{ dec.child_first_name }} {{ dec.child_last_name }}
+                                        {% else %}
+                                            <span class="text-muted italic">Undecided</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if dec.status == 'CONFIRMED' %}bg-success{% elif dec.status == 'PENDING' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                            {{ dec.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3 text-muted">No births declared yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">Your Recent Death Declarations</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dec #</th>
+                                <th>Citizen</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dec in my_death_declarations %}
+                                <tr>
+                                    <td>{{ dec.declaration_number }}</td>
+                                    <td>{{ dec.citizen.get_full_name }}</td>
+                                    <td>
+                                        <span class="badge {% if dec.status == 'CONFIRMED' %}bg-success{% elif dec.status == 'PENDING' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                            {{ dec.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3 text-muted">No deaths declared yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ========================================== -->
+<!-- 5. CITIZEN DASHBOARD VIEW -->
+<!-- ========================================== -->
+{% if user.is_citizen %}
+<div class="row">
+    {% if not citizen %}
+        <div class="col">
+            <div class="alert alert-warning">
+                Your user account is not linked to an active Citizen record. Please contact your Local Subdivision Council to link your National ID.
+            </div>
+        </div>
+    {% else %}
+        <!-- Citizen details -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">My Profile Details</div>
+                <div class="card-body text-center">
+                    {% if citizen.photo %}
+                        <img src="{{ citizen.photo.url }}" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" alt="Profile Picture">
+                    {% else %}
+                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 120px; height: 120px; font-size: 3rem;">
+                            {{ citizen.first_name|slice:":1" }}{{ citizen.last_name|slice:":1" }}
+                        </div>
+                    {% endif %}
+                    
+                    <h4>{{ citizen.get_full_name }}</h4>
+                    <p class="text-muted mb-1">NIC: <strong>{{ citizen.national_id|default:"Under 18 (No NIC)" }}</strong></p>
+                    <span class="badge {% if citizen.current_status == 'ALIVE' %}bg-success{% else %}bg-danger{% endif %} mb-3">
+                        {{ citizen.get_current_status_display }}
+                    </span>
+                    
+                    <ul class="list-group list-group-flush text-start">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Date of Birth</span>
+                            <strong>{{ citizen.dob }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Gender</span>
+                            <strong>{{ citizen.get_gender_display }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Age</span>
+                            <strong>{{ citizen.age }} Years</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Council Subdivision</span>
+                            <strong>{{ citizen.subdivision.name }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family & Household -->
+        <div class="col-md-8">
+            <!-- Action / Certificate Download -->
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">Official Birth Certificate</h5>
+                        <p class="small mb-0">Download your digitally signed, subdivision-sealed official document.</p>
+                    </div>
+                    {% if birth_declaration %}
+                        <a href="{% url 'registry:birth_certificate_pdf' birth_declaration.pk %}" class="btn btn-light btn-lg font-weight-bold" target="_blank">Download PDF</a>
+                    {% else %}
+                        <span class="badge bg-secondary p-2">Unlinked or Pending confirmation</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Parent Links -->
+            <div class="card">
+                <div class="card-header bg-dark text-white">Lineage / Parents</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <h6 class="text-muted">Father / Père</h6>
+                            {% if father %}
+                                <p class="mb-1"><strong>{{ father.get_full_name }}</strong></p>
+                                <p class="small text-muted">NIC: {{ father.national_id|default:"N/A" }}</p>
+                            {% else %}
+                                <p class="text-muted small">Father not registered or linked.</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Mother / Mère</h6>
+                            {% if mother %}
+                                <p class="mb-1"><strong>{{ mother.get_full_name }}</strong></p>
+                                <p class="small text-muted">NIC: {{ mother.national_id|default:"N/A" }}</p>
+                            {% else %}
+                                <p class="text-muted small">Mother not registered or linked.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Household info -->
+            <div class="card mt-4">
+                <div class="card-header bg-dark text-white">Household Members</div>
+                <div class="card-body p-0">
+                    {% if household %}
+                        <div class="p-3 bg-light">
+                            <strong>Household Number:</strong> {{ household.household_number }} | 
+                            <strong>Head of Household:</strong> {{ household.head.get_full_name }}
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Relationship</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for member in household_members %}
+                                        <tr>
+                                            <td>{{ member.citizen.get_full_name }}</td>
+                                            <td>{{ member.get_relationship_to_head_display }}</td>
+                                            <td>
+                                                <span class="badge {% if member.citizen.current_status == 'ALIVE' %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ member.citizen.get_current_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            You are not linked to any household registry.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Child Certificate downloads -->
+            {% if children %}
+            <div class="card mt-4">
+                <div class="card-header bg-dark text-white">My Under-18 Children (Certificates)</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Child Name</th>
+                                    <th>DOB</th>
+                                    <th>Gender</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for child in children %}
+                                    {% if child.age < 18 %}
+                                    <tr>
+                                        <td>{{ child.get_full_name }}</td>
+                                        <td>{{ child.dob }}</td>
+                                        <td>{{ child.get_gender_display }}</td>
+                                        <td>
+                                            {% for record in child.birth_record.all %}
+                                                {% if record.status == 'CONFIRMED' %}
+                                                    <a href="{% url 'registry:birth_certificate_pdf' record.pk %}" class="btn btn-sm btn-outline-success" target="_blank">Download Certificate</a>
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-muted small">No confirmed birth record.</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if user.is_super_admin or user.is_regional_admin %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('subdivisionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Registered Population',
+                data: {{ chart_data|safe }},
+                backgroundColor: 'rgba(0, 122, 94, 0.7)',
+                borderColor: 'rgba(0, 122, 94, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

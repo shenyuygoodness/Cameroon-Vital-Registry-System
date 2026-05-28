@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Login" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="col-md-5">
+        <div class="card shadow-lg">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="mb-0">{% trans "System Authentication" %}</h4>
+                <small class="text-muted">{% trans "Cameroon Local Vital Registry System" %}</small>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label font-weight-bold">{% trans "System ID / Username" %}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label font-weight-bold">{% trans "Password" %}</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="text-danger small">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2 mt-2">{% trans "Sign In" %}</button>
+                </form>
+            </div>
+            <div class="card-footer text-center bg-light">
+                <small class="text-muted">{% trans "Authorized governmental personnel and citizens only." %}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

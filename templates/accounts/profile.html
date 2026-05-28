@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "My Profile" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded-lg">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>{% trans "My Profile" %}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th class="text-muted w-50">{% trans "System ID (Username)" %}</th>
+                        <td class="fw-bold">{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">{% trans "Role" %}</th>
+                        <td><span class="badge bg-primary">{{ user.get_role_display }}</span></td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">{% trans "Full Name" %}</th>
+                        <td>{{ user.get_full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">{% trans "Email" %}</th>
+                        <td>{{ user.email|default:"N/A" }}</td>
+                    </tr>
+                    {% if user.region %}
+                    <tr>
+                        <th class="text-muted">{% trans "Region" %}</th>
+                        <td>{{ user.region.name }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if user.subdivision %}
+                    <tr>
+                        <th class="text-muted">{% trans "Subdivision (Council)" %}</th>
+                        <td>{{ user.subdivision.name }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if user.hospital_name %}
+                    <tr>
+                        <th class="text-muted">{% trans "Hospital" %}</th>
+                        <td>{{ user.hospital_name }} ({{ user.hospital_type }})</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'password_change' %}" class="btn btn-warning"><i class="fas fa-key me-2"></i>{% trans "Change Password" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

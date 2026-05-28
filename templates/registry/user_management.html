@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "User Management" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <div>
+        <h2>{% trans "User Management Dashboard" %}</h2>
+        <p class="text-muted">{% trans "Manage system access and provision new accounts." %}</p>
+    </div>
+</div>
+
+{% if request.user.is_super_admin %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% trans "Regional Administrators" %}</h5>
+        <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#createRegionalAdminModal">
+            <i class="fas fa-plus"></i> {% trans "New Regional Admin" %}
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{% trans "Region-ID" %}</th>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Region Assigned" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for admin in regional_admins %}
+                <tr>
+                    <td><strong>{{ admin.username }}</strong></td>
+                    <td>{{ admin.get_full_name }}</td>
+                    <td>{{ admin.region.name }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-3">{% trans "No Regional Admins found." %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Regional Admin Modal -->
+<div class="modal fade" id="createRegionalAdminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">{% trans "Provision Regional Admin" %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_regional_admin">
+                    {{ regional_admin_form|crispy }}
+                    <div class="alert alert-info mt-3 small">
+                        <i class="fas fa-info-circle"></i> {% trans "Region-ID and a default password will be automatically generated upon creation." %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Create Account" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Council Officers -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{% trans "Council Officers" %}</h5>
+                <button class="btn btn-sm btn-light text-success" data-bs-toggle="modal" data-bs-target="#createCouncilOfficerModal">
+                    <i class="fas fa-plus"></i> {% trans "New Officer" %}
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% trans "Council-ID" %}</th>
+                            <th>{% trans "Name" %}</th>
+                            <th>{% trans "Subdivision" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for officer in council_officers %}
+                        <tr>
+                            <td><strong>{{ officer.username }}</strong></td>
+                            <td>{{ officer.get_full_name }}</td>
+                            <td>{{ officer.subdivision.name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">{% trans "No Council Officers found." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hospital Staff -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{% trans "Hospital Staff" %}</h5>
+                <button class="btn btn-sm btn-light text-info" data-bs-toggle="modal" data-bs-target="#createHospitalStaffModal">
+                    <i class="fas fa-plus"></i> {% trans "New Staff" %}
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% trans "Hospital-ID" %}</th>
+                            <th>{% trans "Hospital Name" %}</th>
+                            <th>{% trans "Subdivision" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for staff in hospital_staff %}
+                        <tr>
+                            <td><strong>{{ staff.username }}</strong></td>
+                            <td>{{ staff.hospital_name }}</td>
+                            <td>{{ staff.subdivision.name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">{% trans "No Hospital Staff found." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Council Officer Modal -->
+<div class="modal fade" id="createCouncilOfficerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">{% trans "Provision Council Officer" %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_council_officer">
+                    {{ council_officer_form|crispy }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-success">{% trans "Create Account" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Create Hospital Staff Modal -->
+<div class="modal fade" id="createHospitalStaffModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">{% trans "Provision Hospital Staff" %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_hospital_staff">
+                    {{ hospital_staff_form|crispy }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-info text-white">{% trans "Create Account" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

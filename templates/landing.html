@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Welcome - CLVRS" %}{% endblock %}
+
+{% block content %}
+<style>
+    /* Cameroonian vibrant background with glassmorphism */
+    .landing-bg {
+        /* Green (#007A5E), Red (#CE1126), Yellow (#FCD116) */
+        background: linear-gradient(135deg, #007A5E 0%, #CE1126 50%, #D4AF37 100%);
+        min-height: 80vh;
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        margin-top: 2rem;
+    }
+    
+    .landing-bg::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%);
+        animation: rotate 30s linear infinite;
+    }
+    
+    @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        color: white;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 45px 0 rgba(0, 0, 0, 0.5);
+        background: rgba(255, 255, 255, 0.25);
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1.5rem;
+        background: -webkit-linear-gradient(45deg, #ffffff, #f0f0f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .btn-glass {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        color: white;
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+        border-radius: 30px;
+    }
+    
+    .btn-glass:hover {
+        background: rgba(255, 255, 255, 0.4);
+        color: #fff;
+        transform: scale(1.05);
+    }
+    
+    .btn-primary-custom {
+        background: #1a202c;
+        border: none;
+        color: white;
+        border-radius: 30px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    
+    .btn-primary-custom:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        color: #FCD116;
+    }
+</style>
+
+<div class="container-fluid px-0">
+    <div class="landing-bg d-flex align-items-center justify-content-center p-5 shadow-lg">
+        <div class="text-center z-index-1 w-100" style="z-index: 10;">
+            <h1 class="display-3 fw-bold text-white mb-4" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.6); letter-spacing: 1px;">
+                {% trans "Welcome to CLVRS" %}
+            </h1>
+            <p class="lead text-light mb-5 fs-4 mx-auto fw-medium" style="text-shadow: 1px 1px 4px rgba(0,0,0,0.6); max-width: 800px;">
+                {% trans "The Cameroon Local Vital Registry System." %}<br>
+                {% trans "A secure, decentralized, and modern infrastructure for civil status registration." %}
+            </p>
+            
+            <div class="d-flex justify-content-center gap-4 mb-5 pb-4">
+                <a href="{% url 'login' %}" class="btn btn-primary-custom btn-lg px-5 py-3 fw-bold">
+                    <i class="fas fa-sign-in-alt me-2"></i> {% trans "Access Portal" %}
+                </a>
+                <a href="#features" class="btn btn-glass btn-lg px-5 py-3 fw-bold">
+                    {% trans "Learn More" %}
+                </a>
+            </div>
+            
+            <div id="features" class="row mt-5 pt-3 text-start justify-content-center">
+                <div class="col-md-4 mb-4">
+                    <div class="glass-card p-5 h-100 text-center">
+                        <i class="fas fa-shield-alt feature-icon"></i>
+                        <h4 class="fw-bold mb-3">{% trans "Bank-Grade Security" %}</h4>
+                        <p class="text-light opacity-100 mb-0">{% trans "Cryptographic encryption for sensitive National ID data and strict role-based jurisdiction access." %}</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="glass-card p-5 h-100 text-center">
+                        <i class="fas fa-network-wired feature-icon"></i>
+                        <h4 class="fw-bold mb-3">{% trans "Decentralized Workflow" %}</h4>
+                        <p class="text-light opacity-100 mb-0">{% trans "Hospitals declare vital events directly, while local councils review, confirm, and register citizens instantly." %}</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="glass-card p-5 h-100 text-center">
+                        <i class="fas fa-file-pdf feature-icon"></i>
+                        <h4 class="fw-bold mb-3">{% trans "Bilingual Certificates" %}</h4>
+                        <p class="text-light opacity-100 mb-0">{% trans "Automatically generate beautifully formatted, legally compliant English and French certificates." %}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

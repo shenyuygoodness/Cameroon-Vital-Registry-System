@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Citizen Details - {{ citizen.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'registry:citizen_list' %}" class="btn btn-outline-secondary">&larr; Back to Registry</a>
+</div>
+
+<div class="row">
+    <!-- Profile Card -->
+    <div class="col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-header bg-dark text-white font-weight-bold">Citizen File</div>
+            <div class="card-body">
+                {% if citizen.photo %}
+                    <img src="{{ citizen.photo.url }}" class="img-thumbnail rounded-circle mb-3" style="width: 160px; height: 160px; object-fit: cover;" alt="Citizen Photo">
+                {% else %}
+                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 130px; height: 130px; font-size: 3.5rem;">
+                        {{ citizen.first_name|slice:":1" }}{{ citizen.last_name|slice:":1" }}
+                    </div>
+                {% endif %}
+                
+                <h4>{{ citizen.get_full_name }}</h4>
+                <p class="text-muted mb-1">NIC: <strong>{{ citizen.national_id|default:"Under-18" }}</strong></p>
+                <div class="mb-3">
+                    <span class="badge {% if citizen.current_status == 'ALIVE' %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                        {{ citizen.get_current_status_display }}
+                    </span>
+                </div>
+                
+                <ul class="list-group list-group-flush text-start">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Date of Birth</span>
+                        <strong>{{ citizen.dob }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Age</span>
+                        <strong>{{ citizen.age }} Years</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Gender</span>
+                        <strong>{{ citizen.get_gender_display }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Subdivision (Council)</span>
+                        <strong>{{ citizen.subdivision.name }}</strong>
+                    </li>
+                    {% if citizen.current_status == 'DECEASED' %}
+                        <li class="list-group-item d-flex justify-content-between bg-danger-subtle text-danger">
+                            <span>Date of Death</span>
+                            <strong>{{ citizen.death_date }}</strong>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-center gap-2">
+                <a href="{% url 'registry:citizen_edit' citizen.pk %}" class="btn btn-sm btn-primary">Edit File</a>
+                <form action="{% url 'registry:citizen_delete' citizen.pk %}" method="post" onsubmit="return confirm('Are you sure you want to soft-delete this record?');" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details and Certificates -->
+    <div class="col-md-8">
+        <!-- Certificates and actions -->
+        <div class="card bg-success text-white mb-4">
+            <div class="card-header bg-success-subtle text-success border-0 font-weight-bold">Available Official Certificates</div>
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-0">Birth Certificate / Acte de Naissance</h6>
+                        <small class="opacity-75">Click to preview and download certified PDF</small>
+                    </div>
+                    <div>
+                        {% for record in citizen.birth_record.all %}
+                            {% if record.status == 'CONFIRMED' %}
+                                <a href="{% url 'registry:birth_certificate_pdf' record.pk %}" class="btn btn-light font-weight-bold" target="_blank">Download Birth Certificate</a>
+                            {% endif %}
+                        {% empty %}
+                            <span class="badge bg-secondary p-2">No confirmed birth record.</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                {% if citizen.current_status == 'DECEASED' %}
+                <hr class="bg-white">
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div>
+                        <h6 class="mb-0">Death Certificate / Acte de Décès</h6>
+                        <small class="opacity-75">Certified copy of death register</small>
+                    </div>
+                    <div>
+                        {% for record in citizen.death_declarations.all %}
+                            {% if record.status == 'CONFIRMED' %}
+                                <a href="{% url 'registry:death_certificate_pdf' record.pk %}" class="btn btn-light btn-danger text-danger font-weight-bold" target="_blank">Download Death Certificate</a>
+                            {% endif %}
+                        {% empty %}
+                            <span class="badge bg-secondary p-2">No confirmed death record.</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lineage -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">Lineage / Parents</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 border-end">
+                        <h6 class="text-muted">Father / Père</h6>
+                        {% if citizen.father %}
+                            <p class="mb-1">
+                                <strong>
+                                    <a href="{% url 'registry:citizen_detail' citizen.father.pk %}">{{ citizen.father.get_full_name }}</a>
+                                </strong>
+                            </p>
+                            <p class="small text-muted mb-0">NIC: {{ citizen.father.national_id|default:"Under-18" }}</p>
+                        {% else %}
+                            <p class="text-muted small mb-0">Father not registered or linked.</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Mother / Mère</h6>
+                        {% if citizen.mother %}
+                            <p class="mb-1">
+                                <strong>
+                                    <a href="{% url 'registry:citizen_detail' citizen.mother.pk %}">{{ citizen.mother.get_full_name }}</a>
+                                </strong>
+                            </p>
+                            <p class="small text-muted mb-0">NIC: {{ citizen.mother.national_id|default:"Under-18" }}</p>
+                        {% else %}
+                            <p class="text-muted small mb-0">Mother not registered or linked.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Household -->
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">Household Membership</div>
+            <div class="card-body p-0">
+                {% if household %}
+                    <div class="p-3 bg-light">
+                        <strong>Household Number:</strong> {{ household.household_number }} | 
+                        <strong>Head:</strong> <a href="{% url 'registry:citizen_detail' household.head.pk %}">{{ household.head.get_full_name }}</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Relationship</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in household_members %}
+                                    <tr>
+                                        <td>
+                                            {% if member.citizen != citizen %}
+                                                <a href="{% url 'registry:citizen_detail' member.citizen.pk %}">{{ member.citizen.get_full_name }}</a>
+                                            {% else %}
+                                                <strong>{{ member.citizen.get_full_name }} (Current File)</strong>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ member.get_relationship_to_head_display }}</td>
+                                        <td>
+                                            <span class="badge {% if member.citizen.current_status == 'ALIVE' %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ member.citizen.get_current_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-3 text-center text-muted">
+                        This citizen is not registered under any household.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Audit History (Only viewable by Staff/Admins) -->
+        {% if user.is_super_admin or user.is_council_officer %}
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Security & Audit History</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 table-sm small">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in audit_logs %}
+                                    <tr>
+                                        <td>{{ log.timestamp }}</td>
+                                        <td>{{ log.user.username|default:"System" }}</td>
+                                        <td><span class="badge bg-dark">{{ log.action }}</span></td>
+                                        <td>{{ log.details }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-3 text-muted">No audit logs for this record.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
