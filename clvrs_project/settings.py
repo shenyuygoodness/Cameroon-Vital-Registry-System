@@ -11,17 +11,17 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import logging.handlers
 from pathlib import Path
 import environ
 
-# Initialize environ
+# Initialize environ — defaults are safe-for-production values
 env = environ.Env(
     DEBUG=(bool, False),
-    #ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
-    ALLOWED_HOSTS = (list, ['*']),
-    SESSION_COOKIE_SECURE=(bool, False),
-    CSRF_COOKIE_SECURE=(bool, False),
-    SECURE_SSL_REDIRECT=(bool, False),
+    ALLOWED_HOSTS=(list, []),          # empty = safe default, must be set explicitly
+    SESSION_COOKIE_SECURE=(bool, True),
+    CSRF_COOKIE_SECURE=(bool, True),
+    SECURE_SSL_REDIRECT=(bool, True),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -136,6 +137,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media Files - Standard public uploads
 MEDIA_URL = '/media/'
@@ -144,19 +146,38 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Secure Media Files (for sensitive photo uploads, stored outside standard media root)
 SECURE_MEDIA_ROOT = BASE_DIR / 'media_secure'
 
-# Security Headers & Cookie Policies (OWASP Top 10)
-SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=False) if not DEBUG else False
-CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=False) if not DEBUG else False
-SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False) if not DEBUG else False
+# ── Cookie & session security ──
+# In DEBUG mode cookies cannot be Secure (no HTTPS locally).
+# In production these must all be True — enforced via .env.
+SESSION_COOKIE_SECURE = False if DEBUG else env.bool('SESSION_COOKIE_SECURE', default=True)
+CSRF_COOKIE_SECURE    = False if DEBUG else env.bool('CSRF_COOKIE_SECURE',    default=True)
+SECURE_SSL_REDIRECT   = False if DEBUG else env.bool('SECURE_SSL_REDIRECT',   default=True)
 
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
-SESSION_COOKIE_AGE = 1800  # 30 minutes session timeout
+CSRF_COOKIE_HTTPONLY    = True
+SESSION_COOKIE_AGE      = 1800   # 30-minute idle timeout
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE    = 'Strict'
 
-X_FRAME_OPTIONS = 'DENY'
+# ── Transport security ──
+SECURE_HSTS_SECONDS            = 0 if DEBUG else 31536000   # 1 year in production
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD            = not DEBUG
+
+# ── Content security ──
+X_FRAME_OPTIONS          = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
+# SECURE_BROWSER_XSS_FILTER is intentionally omitted — the header is deprecated
+# and has no effect on modern browsers. Rely on CSP instead.
+SECURE_REFERRER_POLICY   = 'strict-origin-when-cross-origin'
+
+# ── Upload limits ──
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB maximum request body
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB maximum single file
+
+# ── Activation token expiry (24 hours) ──
+PASSWORD_RESET_TIMEOUT = 86400
 
 # Crispy Forms Config
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
@@ -165,9 +186,85 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 # Encryption Configuration
 ENCRYPTION_KEY = env('ENCRYPTION_KEY')
 
+# Email Configuration
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CLVRS Registry <noreply@clvrs.cm>')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
+
+# ── Trusted reverse-proxy IPs ──
+# Only connections from these IPs are allowed to set X-Forwarded-For.
+# Set to your load-balancer / Nginx IP(s) in production, e.g. "10.0.0.1,10.0.0.2"
+TRUSTED_PROXIES = set(env.list('TRUSTED_PROXIES', default=[]))
+
+# ── Cache (Redis) ──
+# Shared across all Gunicorn workers — required for rate-limiting to work correctly.
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "clvrs",
+    }
+}
+
+# ── Logging ──
+LOG_DIR = BASE_DIR / 'logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {process:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'clvrs.log',
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'registry': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'accounts': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 

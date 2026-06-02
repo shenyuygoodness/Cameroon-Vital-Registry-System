@@ -1,12 +1,17 @@
 import hashlib
+import hmac
 import datetime
+import logging
 from io import BytesIO
 import pandas as pd
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 # ReportLab imports
 from reportlab.lib.pagesizes import letter
@@ -23,10 +28,10 @@ class EncryptionService:
     def get_fernet():
         key = getattr(settings, 'ENCRYPTION_KEY', None)
         if not key:
-            # fallback for development if not configured
-            dummy_key = Fernet.generate_key()
-            return Fernet(dummy_key)
-        # Enforce that key is in bytes
+            raise ImproperlyConfigured(
+                "ENCRYPTION_KEY is not set. Generate one with: "
+                "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
         if isinstance(key, str):
             key = key.encode()
         return Fernet(key)
@@ -38,8 +43,9 @@ class EncryptionService:
         try:
             f = cls.get_fernet()
             return f.encrypt(text.strip().encode()).decode()
-        except Exception:
-            return None
+        except Exception as e:
+            logger.critical("ENCRYPTION FAILURE — data could not be encrypted: %s", e)
+            raise RuntimeError("Encryption failed. Check ENCRYPTION_KEY configuration.") from e
 
     @classmethod
     def decrypt(cls, encrypted_text: str) -> str:
@@ -48,17 +54,30 @@ class EncryptionService:
         try:
             f = cls.get_fernet()
             return f.decrypt(encrypted_text.encode()).decode()
-        except Exception:
-            return "Decryption Error"
+        except InvalidToken:
+            logger.critical(
+                "DECRYPTION FAILURE — InvalidToken. The ENCRYPTION_KEY may have "
+                "been rotated without re-encrypting existing data, or the data is corrupt."
+            )
+            raise RuntimeError("Decryption failed. The encryption key may be incorrect.") from None
+        except Exception as e:
+            logger.critical("DECRYPTION FAILURE — unexpected error: %s", e)
+            raise RuntimeError("Decryption failed unexpectedly.") from e
 
 def get_hash(text: str) -> str:
     """
-    Generates a deterministic SHA-256 hash of a string.
-    Used for exact lookup match and unique constraints on encrypted fields.
+    Generates a keyed HMAC-SHA256 digest of a string.
+    Using ENCRYPTION_KEY as the HMAC secret prevents rainbow-table attacks
+    against the hash column even if the database is read by an attacker.
     """
     if not text:
         return None
-    return hashlib.sha256(text.strip().upper().encode()).hexdigest()
+    key = getattr(settings, 'ENCRYPTION_KEY', None)
+    if not key:
+        raise ImproperlyConfigured("ENCRYPTION_KEY is not set — cannot generate secure NIC hash.")
+    if isinstance(key, str):
+        key = key.encode()
+    return hmac.new(key, text.strip().upper().encode(), hashlib.sha256).hexdigest()
 
 
 # -------------------------------------------------------------

@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -217,11 +218,14 @@ class BirthDeclaration(VitalEvent):
     child_last_name = models.CharField(max_length=100, blank=True, null=True)
     child_dob = models.DateField()
     child_gender = models.CharField(max_length=1, choices=Citizen.Gender.choices)
-    
-    father_national_id = models.CharField(max_length=50, blank=True, null=True)
+
+    # NICs stored encrypted; hash columns enable exact-match lookups without decryption
+    father_national_id = EncryptedCharField(max_length=255, blank=True, null=True)
+    father_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     father_name = models.CharField(max_length=200, blank=True, null=True)
-    
-    mother_national_id = models.CharField(max_length=50)
+
+    mother_national_id = EncryptedCharField(max_length=255)
+    mother_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
     mother_name = models.CharField(max_length=200)
     
     place_of_birth = models.CharField(max_length=150, help_text="Hospital name or village")
@@ -237,9 +241,15 @@ class BirthDeclaration(VitalEvent):
     def save(self, *args, **kwargs):
         if not self.declaration_number:
             year = self.child_dob.year if self.child_dob else timezone.now().year
-            # Create a unique serial code
-            serial = timezone.now().strftime('%f')[:5]
-            self.declaration_number = f"CLVRS-B-{year}-{serial}"
+            for _ in range(10):
+                serial = uuid.uuid4().hex[:8].upper()
+                candidate = f"CLVRS-B-{year}-{serial}"
+                if not BirthDeclaration.objects.filter(declaration_number=candidate).exists():
+                    self.declaration_number = candidate
+                    break
+        # Sync hash columns for secure lookup
+        self.mother_national_id_hash = get_hash(self.mother_national_id) if self.mother_national_id else None
+        self.father_national_id_hash = get_hash(self.father_national_id) if self.father_national_id else None
         super().save(*args, **kwargs)
 
 
@@ -260,23 +270,28 @@ class DeathDeclaration(VitalEvent):
     def save(self, *args, **kwargs):
         if not self.declaration_number:
             year = self.death_date.year if self.death_date else timezone.now().year
-            serial = timezone.now().strftime('%f')[:5]
-            self.declaration_number = f"CLVRS-D-{year}-{serial}"
+            for _ in range(10):
+                serial = uuid.uuid4().hex[:8].upper()
+                candidate = f"CLVRS-D-{year}-{serial}"
+                if not DeathDeclaration.objects.filter(declaration_number=candidate).exists():
+                    self.declaration_number = candidate
+                    break
         super().save(*args, **kwargs)
 
 
 # 5. Audit Logging
 class AuditLog(models.Model):
     class Action(models.TextChoices):
-        CREATE = 'CREATE', 'Create'
-        UPDATE = 'UPDATE', 'Update'
-        DELETE = 'DELETE', 'Delete'
+        CREATE  = 'CREATE',  'Create'
+        UPDATE  = 'UPDATE',  'Update'
+        DELETE  = 'DELETE',  'Delete'
         APPROVE = 'APPROVE', 'Approve'
-        REJECT = 'REJECT', 'Reject'
-        IMPORT = 'IMPORT', 'Import'
-        EXPORT = 'EXPORT', 'Export'
-        LOGIN = 'LOGIN', 'Login'
-        LOGOUT = 'LOGOUT', 'Logout'
+        REJECT  = 'REJECT',  'Reject'
+        IMPORT  = 'IMPORT',  'Import'
+        EXPORT  = 'EXPORT',  'Export'
+        LOGIN   = 'LOGIN',   'Login'
+        LOGOUT  = 'LOGOUT',  'Logout'
+        LOCKOUT = 'LOCKOUT', 'Account Locked'
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     action = models.CharField(max_length=20, choices=Action.choices)

@@ -1,5 +1,8 @@
 import os
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
+
+logger = logging.getLogger(__name__)
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -15,6 +18,7 @@ import pandas as pd
 from io import BytesIO
 
 from accounts.models import User
+from accounts.views import _get_client_ip
 from registry.models import (
     Region, Division, Subdivision, Citizen, Household, HouseholdMember,
     BirthDeclaration, DeathDeclaration, AuditLog
@@ -66,11 +70,10 @@ def get_visible_births_qs(user):
     elif user.is_council_officer or user.is_hospital_staff:
         return BirthDeclaration.objects.filter(subdivision=user.subdivision)
     elif user.is_citizen and user.citizen_profile:
-        nic = user.citizen_profile.national_id
-        # Citizen can view birth declaration if it is theirs or they are parents
+        nic_hash = user.citizen_profile.national_id_hash
         q_filter = models.Q(associated_citizen=user.citizen_profile)
-        if nic:
-            q_filter |= models.Q(mother_national_id=nic) | models.Q(father_national_id=nic)
+        if nic_hash:
+            q_filter |= models.Q(mother_national_id_hash=nic_hash) | models.Q(father_national_id_hash=nic_hash)
         return BirthDeclaration.objects.filter(q_filter)
     return BirthDeclaration.objects.none()
 
@@ -270,7 +273,7 @@ class CitizenCreateView(CouncilOfficerRequiredMixin, CreateView):
             model_name="Citizen",
             record_id=str(self.object.id),
             details=f"Created citizen: {self.object.get_full_name()} (NIC Hashed: {self.object.national_id_hash or 'None'}).",
-            ip_address=self.request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(self.request)
         )
         messages.success(self.request, f"Citizen {self.object.get_full_name()} registered successfully.")
         return response
@@ -301,7 +304,7 @@ class CitizenUpdateView(CouncilOfficerRequiredMixin, UpdateView):
             model_name="Citizen",
             record_id=str(self.object.id),
             details=f"Updated details for citizen: {self.object.get_full_name()}.",
-            ip_address=self.request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(self.request)
         )
         messages.success(self.request, f"Citizen {self.object.get_full_name()} updated successfully.")
         return response
@@ -321,7 +324,7 @@ class CitizenDeleteView(CouncilOfficerRequiredMixin, View):
             model_name="Citizen",
             record_id=str(citizen.id),
             details=f"Soft deleted citizen: {citizen.get_full_name()}.",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(request)
         )
         messages.warning(request, f"Citizen {citizen.get_full_name()} has been soft-deleted.")
         return redirect('registry:citizen_list')
@@ -355,7 +358,7 @@ class BirthDeclarationCreateView(LoginRequiredMixin, CreateView):
             model_name="BirthDeclaration",
             record_id=str(self.object.id),
             details=f"Submitted pending birth declaration {self.object.declaration_number}.",
-            ip_address=self.request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(self.request)
         )
         messages.success(self.request, f"Birth declaration {self.object.declaration_number} submitted and is PENDING review.")
         return response
@@ -386,7 +389,7 @@ class DeathDeclarationCreateView(LoginRequiredMixin, CreateView):
             model_name="DeathDeclaration",
             record_id=str(self.object.id),
             details=f"Submitted pending death declaration {self.object.declaration_number}.",
-            ip_address=self.request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(self.request)
         )
         messages.success(self.request, f"Death declaration {self.object.declaration_number} submitted and is PENDING review.")
         return response
@@ -434,7 +437,7 @@ class BirthDeclarationReviewView(CouncilOfficerRequiredMixin, View):
                 model_name="BirthDeclaration",
                 record_id=str(declaration.id),
                 details=f"Rejected birth declaration {declaration.declaration_number}. Reason: {reason}",
-                ip_address=request.META.get('REMOTE_ADDR')
+                ip_address=_get_client_ip(request)
             )
             messages.warning(request, f"Birth declaration {declaration.declaration_number} has been rejected.")
             
@@ -485,11 +488,11 @@ class BirthDeclarationReviewView(CouncilOfficerRequiredMixin, View):
                         model_name="BirthDeclaration",
                         record_id=str(declaration.id),
                         details=f"Confirmed birth declaration {declaration.declaration_number}. Created Citizen profile ID {citizen.id}.",
-                        ip_address=request.META.get('REMOTE_ADDR')
+                        ip_address=_get_client_ip(request)
                     )
                 messages.success(request, f"Birth declaration approved. Citizen profile created for {citizen.get_full_name()}.")
             except Exception as e:
-                messages.error(request, f"An error occurred during verification: {str(e)}")
+                logger.exception("Declaration review error"); messages.error(request, "An internal error occurred. Our team has been notified.")
                 
         return redirect('registry:pending_list')
 
@@ -523,7 +526,7 @@ class DeathDeclarationReviewView(CouncilOfficerRequiredMixin, View):
                 model_name="DeathDeclaration",
                 record_id=str(declaration.id),
                 details=f"Rejected death declaration {declaration.declaration_number}. Reason: {reason}",
-                ip_address=request.META.get('REMOTE_ADDR')
+                ip_address=_get_client_ip(request)
             )
             messages.warning(request, f"Death declaration {declaration.declaration_number} has been rejected.")
             
@@ -549,11 +552,11 @@ class DeathDeclarationReviewView(CouncilOfficerRequiredMixin, View):
                         model_name="DeathDeclaration",
                         record_id=str(declaration.id),
                         details=f"Confirmed death declaration {declaration.declaration_number}. Updated Citizen {citizen.get_full_name()} status to DECEASED.",
-                        ip_address=request.META.get('REMOTE_ADDR')
+                        ip_address=_get_client_ip(request)
                     )
                 messages.success(request, f"Death declaration approved. Citizen {citizen.get_full_name()} record updated to Deceased.")
             except Exception as e:
-                messages.error(request, f"An error occurred during verification: {str(e)}")
+                logger.exception("Declaration review error"); messages.error(request, "An internal error occurred. Our team has been notified.")
 
         return redirect('registry:pending_list')
 
@@ -576,7 +579,7 @@ class BirthCertificatePDFView(LoginRequiredMixin, View):
             model_name="BirthCertificate",
             record_id=str(declaration.id),
             details=f"Downloaded birth certificate for declaration {declaration.declaration_number}.",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(request)
         )
         
         filename = f"Birth_Certificate_{declaration.declaration_number}.pdf"
@@ -598,7 +601,7 @@ class DeathCertificatePDFView(LoginRequiredMixin, View):
             model_name="DeathCertificate",
             record_id=str(declaration.id),
             details=f"Downloaded death certificate for declaration {declaration.declaration_number}.",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(request)
         )
         
         filename = f"Death_Certificate_{declaration.declaration_number}.pdf"
@@ -615,6 +618,15 @@ class BulkImportView(CouncilOfficerRequiredMixin, TemplateView):
         excel_file = request.FILES.get('excel_file')
         if not excel_file:
             messages.error(request, "Please select an Excel or CSV file to upload.")
+            return render(request, self.template_name)
+
+        if excel_file.size > 5 * 1024 * 1024:
+            messages.error(request, "File too large. Maximum allowed size is 5 MB.")
+            return render(request, self.template_name)
+
+        allowed_extensions = ('.xlsx', '.xls', '.csv')
+        if not excel_file.name.lower().endswith(allowed_extensions):
+            messages.error(request, "Invalid file type. Only .xlsx, .xls, and .csv files are accepted.")
             return render(request, self.template_name)
 
         subdivision = request.user.subdivision
@@ -642,7 +654,7 @@ class BulkImportView(CouncilOfficerRequiredMixin, TemplateView):
             messages.error(request, "Bulk upload failed due to validation errors. Database changes rolled back.")
             return render(request, self.template_name, context)
         except Exception as e:
-            messages.error(request, f"An unexpected error occurred: {str(e)}")
+            logger.exception("Bulk import unexpected error"); messages.error(request, "An unexpected error occurred. Please contact your administrator.")
             return render(request, self.template_name)
 
     def get_context_data(self, **kwargs):
@@ -662,18 +674,25 @@ class DownloadTemplateView(LoginRequiredMixin, View):
 class ExportCSVView(CouncilOfficerRequiredMixin, View):
     """
     Exports citizens in current jurisdiction as a CSV file.
+    National IDs are never exported in plaintext — only the last 4 chars are shown.
+    Full NIC export requires Super Admin role and is separately audited.
     """
     def get(self, request, *args, **kwargs):
         qs = get_visible_citizens_qs(request.user)
-        
-        # Prepare list
+
         data = []
         for c in qs:
+            # Never export plaintext NICs — show masked version only
+            if c.national_id:
+                masked_nic = '****' + c.national_id[-4:]
+            else:
+                masked_nic = 'Under-18'
+
             data.append({
                 'Names': c.get_full_name(),
                 'Date of Birth': c.dob.strftime('%Y-%m-%d'),
                 'Gender': c.get_gender_display(),
-                'National ID (NIC)': c.national_id or 'Under-18',
+                'NIC (Masked)': masked_nic,
                 'Status': c.get_current_status_display(),
                 'Date of Death': c.death_date.strftime('%Y-%m-%d') if c.death_date else 'N/A',
                 'Father': c.father.get_full_name() if c.father else 'N/A',
@@ -692,7 +711,7 @@ class ExportCSVView(CouncilOfficerRequiredMixin, View):
             action=AuditLog.Action.EXPORT,
             model_name="Citizen",
             details=f"Exported {len(data)} citizen records to CSV.",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=_get_client_ip(request)
         )
         
         filename = f"CLVRS_Export_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -713,7 +732,7 @@ class SecureMediaView(LoginRequiredMixin, View):
             raise Http404("Media file not found.")
 
         db_path = path.replace('\\', '/')
-        citizen = Citizen.objects.filter(photo__icontains=db_path).first()
+        citizen = Citizen.objects.filter(photo=db_path).first()
         
         if not citizen:
             if not (request.user.is_super_admin or request.user.is_council_officer or request.user.is_regional_admin):
@@ -726,6 +745,7 @@ class SecureMediaView(LoginRequiredMixin, View):
         return FileResponse(open(file_path, 'rb'))
 
 from registry.forms import RegionalAdminCreationForm, CouncilOfficerCreationForm, HospitalStaffCreationForm
+from accounts.utils import send_invitation_email
 
 class UserManagementDashboardView(RegionalAdminRequiredMixin, TemplateView):
     template_name = 'registry/user_management.html'
@@ -735,22 +755,28 @@ class UserManagementDashboardView(RegionalAdminRequiredMixin, TemplateView):
         user = self.request.user
         
         if user.is_super_admin:
-            context['regional_admins'] = User.objects.filter(role=User.Role.REGIONAL_ADMIN)
+            context['regional_admins'] = User.objects.filter(role=User.Role.REGIONAL_ADMIN, is_active=True)
             context['regional_admin_form'] = RegionalAdminCreationForm()
         
         if user.is_super_admin or user.is_regional_admin:
             region = user.region if not user.is_super_admin else None
-            
+
             co_qs = User.objects.filter(role=User.Role.COUNCIL_OFFICER)
             hs_qs = User.objects.filter(role=User.Role.HOSPITAL_STAFF)
-            
+            ra_qs = User.objects.filter(role=User.Role.REGIONAL_ADMIN)
+
             if region:
                 co_qs = co_qs.filter(division__region=region)
                 hs_qs = hs_qs.filter(division__region=region)
-                
-            context['council_officers'] = co_qs
-            context['hospital_staff'] = hs_qs
-            
+                ra_qs = ra_qs.filter(region=region)
+
+            context['council_officers'] = co_qs.filter(is_active=True)
+            context['hospital_staff'] = hs_qs.filter(is_active=True)
+
+            # All inactive accounts visible to this admin (pending activation)
+            pending_qs = (co_qs | hs_qs | ra_qs).filter(is_active=False).distinct()
+            context['pending_accounts'] = pending_qs
+
             context['council_officer_form'] = CouncilOfficerCreationForm(user=user)
             context['hospital_staff_form'] = HospitalStaffCreationForm(user=user)
             
@@ -766,34 +792,82 @@ class UserManagementDashboardView(RegionalAdminRequiredMixin, TemplateView):
                 new_user = form.save(commit=False)
                 new_user.role = User.Role.REGIONAL_ADMIN
                 new_user.username = User.generate_id('REG')
-                new_user.set_password('password123')
+                new_user.set_unusable_password()
+                new_user.is_active = False
                 new_user.save()
-                messages.success(request, f"Regional Admin {new_user.username} created. Default password: 'password123'.")
+                try:
+                    send_invitation_email(request, new_user)
+                    messages.success(request, f"Regional Admin account {new_user.username} created. Invitation sent to {new_user.email}.")
+                except Exception as e:
+                    messages.warning(request, f"Account {new_user.username} created but email failed to send. Use 'Resend' to retry.")
             else:
                 messages.error(request, f"Error: {form.errors}")
-                
+
         elif action == 'create_council_officer' and (user.is_super_admin or user.is_regional_admin):
             form = CouncilOfficerCreationForm(request.POST, user=user)
             if form.is_valid():
                 new_user = form.save(commit=False)
                 new_user.role = User.Role.COUNCIL_OFFICER
                 new_user.username = User.generate_id('COU')
-                new_user.set_password('password123')
+                new_user.set_unusable_password()
+                new_user.is_active = False
                 new_user.save()
-                messages.success(request, f"Council Officer {new_user.username} created. Default password: 'password123'.")
+                try:
+                    send_invitation_email(request, new_user)
+                    messages.success(request, f"Council Officer account {new_user.username} created. Invitation sent to {new_user.email}.")
+                except Exception as e:
+                    messages.warning(request, f"Account {new_user.username} created but email failed to send. Use 'Resend' to retry.")
             else:
                 messages.error(request, f"Error: {form.errors}")
-                
+
         elif action == 'create_hospital_staff' and (user.is_super_admin or user.is_regional_admin):
             form = HospitalStaffCreationForm(request.POST, user=user)
             if form.is_valid():
                 new_user = form.save(commit=False)
                 new_user.role = User.Role.HOSPITAL_STAFF
                 new_user.username = User.generate_id('HOS')
-                new_user.set_password('password123')
+                new_user.set_unusable_password()
+                new_user.is_active = False
                 new_user.save()
-                messages.success(request, f"Hospital Staff {new_user.username} created. Default password: 'password123'.")
+                try:
+                    send_invitation_email(request, new_user)
+                    messages.success(request, f"Hospital Staff account {new_user.username} created. Invitation sent to {new_user.email}.")
+                except Exception as e:
+                    messages.warning(request, f"Account {new_user.username} created but email failed to send. Use 'Resend' to retry.")
             else:
                 messages.error(request, f"Error: {form.errors}")
 
+        return redirect('registry:user_management')
+
+
+def _get_manageable_roles(user):
+    """Return the roles this user is permitted to manage."""
+    roles = [User.Role.COUNCIL_OFFICER, User.Role.HOSPITAL_STAFF]
+    if user.is_super_admin:
+        roles.append(User.Role.REGIONAL_ADMIN)
+    return roles
+
+
+class ResendInvitationView(RegionalAdminRequiredMixin, View):
+    def post(self, request, pk):
+        target_user = get_object_or_404(
+            User, pk=pk, is_active=False, role__in=_get_manageable_roles(request.user)
+        )
+        try:
+            send_invitation_email(request, target_user)
+            messages.success(request, f"Invitation resent to {target_user.email}.")
+        except Exception as e:
+            logger.error("Invitation email failed for user pk=%s: %s", target_user.pk, e)
+            messages.error(request, "Failed to send invitation email. Please check the email configuration and use Resend.")
+        return redirect('registry:user_management')
+
+
+class CancelAccountView(RegionalAdminRequiredMixin, View):
+    def post(self, request, pk):
+        target_user = get_object_or_404(
+            User, pk=pk, is_active=False, role__in=_get_manageable_roles(request.user)
+        )
+        username = target_user.username
+        target_user.delete()
+        messages.warning(request, f"Pending account {username} has been cancelled and removed.")
         return redirect('registry:user_management')
