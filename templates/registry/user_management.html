@@ -12,6 +12,63 @@
     </div>
 </div>
 
+{% with pending_users=council_officers|dictsort:"is_active" %}{% endwith %}
+
+{% comment %}Pending Accounts Section{% endcomment %}
+{% load i18n %}
+{% with all_pending=request.user %}
+{% endwith %}
+
+<!-- Pending Activation Accounts -->
+{% if pending_accounts %}
+<div class="card shadow-sm mb-4 border-warning">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>{% trans "Pending Activation" %}</h5>
+        <span class="badge bg-dark">{{ pending_accounts|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{% trans "System ID" %}</th>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Role" %}</th>
+                    <th>{% trans "Email" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pending in pending_accounts %}
+                <tr>
+                    <td><strong class="font-monospace">{{ pending.username }}</strong></td>
+                    <td>{{ pending.get_full_name }}</td>
+                    <td><span class="badge bg-secondary">{{ pending.get_role_display }}</span></td>
+                    <td>{{ pending.email }}</td>
+                    <td>
+                        <div class="d-flex gap-2">
+                            <form action="{% url 'registry:resend_invitation' pending.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Resend invitation email">
+                                    <i class="fas fa-paper-plane me-1"></i>{% trans "Resend" %}
+                                </button>
+                            </form>
+                            <form action="{% url 'registry:cancel_account' pending.pk %}" method="post" style="display:inline;"
+                                  onsubmit="return confirm('Cancel and delete account {{ pending.username }}? This cannot be undone.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel account">
+                                    <i class="fas fa-times me-1"></i>{% trans "Cancel" %}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 {% if request.user.is_super_admin %}
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">

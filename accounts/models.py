@@ -1,5 +1,5 @@
 import string
-import random
+import secrets
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
@@ -100,10 +100,11 @@ class User(AbstractUser):
         return self.role == self.Role.CITIZEN
 
     @classmethod
-    def generate_id(cls, prefix, length=5):
-        """Generates a unique ID like PRE-1A2B3"""
+    def generate_id(cls, prefix, length=6):
+        """Generates a cryptographically random unique System ID like PRE-A1B2C3."""
+        alphabet = string.ascii_uppercase + string.digits
         while True:
-            chars = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+            chars = ''.join(secrets.choice(alphabet) for _ in range(length))
             new_id = f"{prefix}-{chars}"
             if not cls.objects.filter(username=new_id).exists():
                 return new_id

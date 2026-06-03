@@ -186,19 +186,31 @@ class DeathDeclarationForm(forms.ModelForm):
 from accounts.models import User
 
 class RegionalAdminCreationForm(forms.ModelForm):
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'region']
+        fields = ['first_name', 'last_name', 'region', 'email']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'region': forms.Select(attrs={'class': 'form-select', 'required': True}),
         }
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            email = email.strip()
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("An account with this email address already exists.")
+        return email
+
 class CouncilOfficerCreationForm(forms.ModelForm):
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'division', 'subdivision']
+        fields = ['first_name', 'last_name', 'division', 'subdivision', 'email']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
@@ -213,6 +225,14 @@ class CouncilOfficerCreationForm(forms.ModelForm):
             self.fields['division'].queryset = self.fields['division'].queryset.filter(region=user.region)
             self.fields['subdivision'].queryset = self.fields['subdivision'].queryset.filter(division__region=user.region)
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            email = email.strip()
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("An account with this email address already exists.")
+        return email
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         if instance.division:
@@ -222,9 +242,11 @@ class CouncilOfficerCreationForm(forms.ModelForm):
         return instance
 
 class HospitalStaffCreationForm(forms.ModelForm):
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'division', 'subdivision', 'hospital_name', 'hospital_type', 'dr_incharge']
+        fields = ['first_name', 'last_name', 'division', 'subdivision', 'hospital_name', 'hospital_type', 'dr_incharge', 'email']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
@@ -241,6 +263,14 @@ class HospitalStaffCreationForm(forms.ModelForm):
         if user and user.is_regional_admin and user.region:
             self.fields['division'].queryset = self.fields['division'].queryset.filter(region=user.region)
             self.fields['subdivision'].queryset = self.fields['subdivision'].queryset.filter(division__region=user.region)
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            email = email.strip()
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError("An account with this email address already exists.")
+        return email
 
     def save(self, commit=True):
         instance = super().save(commit=False)

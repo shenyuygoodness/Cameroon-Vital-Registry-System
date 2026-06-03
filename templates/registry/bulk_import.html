@@ -1,91 +1,94 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Bulk Import Citizens - CLVRS{% endblock %}
+{% block title %}{% trans "Bulk Import Citizens" %} - CLVRS{% endblock %}
 
 {% block content %}
+<div class="mb-3">
+    <a href="{% url 'registry:citizen_list' %}" class="btn btn-outline-secondary">&larr; {% trans "Back to Citizens" %}</a>
+</div>
 <div class="row justify-content-center">
     <div class="col-md-9">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-dark text-white py-3">
-                <h4 class="mb-0">Bulk Citizen Upload (Excel / CSV)</h4>
-                <small class="text-muted">Import citizen rosters securely. Database actions are atomic (all-or-nothing).</small>
+                <h4 class="mb-0">{% trans "Bulk Citizen Upload (Excel / CSV)" %}</h4>
+                <small class="text-muted">{% trans "Import citizen rosters securely. Database actions are atomic (all-or-nothing)." %}</small>
             </div>
             <div class="card-body p-4">
                 <div class="row mb-4">
                     <div class="col-md-7 border-end">
-                        <h5>Step 1: Download Template</h5>
-                        <p class="text-muted">Please download our standardized Excel template first to ensure the columns match CLVRS system schemas exactly.</p>
+                        <h5>{% trans "Step 1: Download Template" %}</h5>
+                        <p class="text-muted">{% trans "Please download our standardized Excel template first to ensure the columns match CLVRS system schemas exactly." %}</p>
                         <a href="{% url 'registry:download_template' %}" class="btn btn-outline-success font-weight-bold mb-3">
-                            Download Excel Template (.xlsx)
+                            {% trans "Download Excel Template (.xlsx)" %}
                         </a>
-                        
-                        <h6 class="text-muted mt-2">Required Columns & Constraints:</h6>
+
+                        <h6 class="text-muted mt-2">{% trans "Required Columns & Constraints:" %}</h6>
                         <ul class="small text-muted ps-3">
-                            <li><code>first_name</code> / <code>last_name</code>: Citizen names.</li>
-                            <li><code>dob</code>: Date of birth (Format: <code>YYYY-MM-DD</code>).</li>
-                            <li><code>gender</code>: Must be <code>M</code> or <code>F</code> (or Male/Female).</li>
-                            <li><code>national_id</code>: Required for citizens age 18 and above. Must be blank for under-18. Length 9-20 characters.</li>
-                            <li><code>father_national_id</code> / <code>mother_national_id</code>: If specified, the parent must already exist in the database (NIC hash exact lookup).</li>
+                            <li><code>first_name</code> / <code>last_name</code>: {% trans "Citizen names." %}</li>
+                            <li><code>dob</code>: {% trans "Date of birth (Format: YYYY-MM-DD)." %}</li>
+                            <li><code>gender</code>: {% trans "Must be M or F (or Male/Female)." %}</li>
+                            <li><code>national_id</code>: {% trans "Required for citizens age 18 and above. Must be blank for under-18. Length 9-20 characters." %}</li>
+                            <li><code>father_national_id</code> / <code>mother_national_id</code>: {% trans "If specified, the parent must already exist in the database (NIC hash exact lookup)." %}</li>
                         </ul>
                     </div>
-                    
+
                     <div class="col-md-5 ps-md-4">
-                        <h5>Step 2: Upload File</h5>
+                        <h5>{% trans "Step 2: Upload File" %}</h5>
                         <form method="post" enctype="multipart/form-data">
                             {% csrf_token %}
-                            
+
                             {% if user.is_super_admin %}
                                 <div class="mb-3">
-                                    <label for="subdivision" class="form-label font-weight-bold">Select Subdivision Council</label>
+                                    <label for="subdivision" class="form-label font-weight-bold">{% trans "Select Subdivision Council" %}</label>
                                     <select name="subdivision" id="subdivision" class="form-select" required>
-                                        <option value="">-- Choose Subdivision --</option>
+                                        <option value="">-- {% trans "Choose Subdivision" %} --</option>
                                         {% for sub in subdivisions %}
                                             <option value="{{ sub.id }}">{{ sub.name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
                             {% endif %}
-                            
+
                             <div class="mb-3">
-                                <label for="excel_file" class="form-label font-weight-bold">Choose excel or csv file</label>
+                                <label for="excel_file" class="form-label font-weight-bold">{% trans "Choose Excel or CSV file" %}</label>
                                 <input type="file" name="excel_file" id="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                             </div>
-                            
-                            <button type="submit" class="btn btn-primary w-100 py-2 mt-2">Upload and Process</button>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 mt-2">{% trans "Upload and Process" %}</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Validation Errors Display -->
         {% if validation_errors %}
-            <div class="card border-danger shadow-sm">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Import Validation Errors Detected</h5>
-                    <small>The transaction was rolled back. No citizens were added to the database. Fix these errors in your file and try again.</small>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 text-danger small">
-                            <thead class="table-danger">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Validation Issue / Failure Message</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for error in validation_errors %}
-                                    <tr>
-                                        <td class="font-weight-bold" style="width: 50px;">{{ forloop.counter }}</td>
-                                        <td>{{ error }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="card border-danger shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">{% trans "Import Validation Errors Detected" %}</h5>
+                <small>{% trans "The transaction was rolled back. No citizens were added to the database. Fix these errors in your file and try again." %}</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 text-danger small">
+                        <thead class="table-danger">
+                            <tr>
+                                <th>#</th>
+                                <th>{% trans "Validation Issue / Failure Message" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for error in validation_errors %}
+                            <tr>
+                                <td class="font-weight-bold" style="width:50px;">{{ forloop.counter }}</td>
+                                <td>{{ error }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
         {% endif %}
     </div>
 </div>

@@ -6,7 +6,8 @@ from registry.views import (
     PendingDeclarationsListView, BirthDeclarationReviewView,
     DeathDeclarationReviewView, BirthCertificatePDFView,
     DeathCertificatePDFView, BulkImportView, DownloadTemplateView,
-    ExportCSVView, SecureMediaView, UserManagementDashboardView
+    ExportCSVView, SecureMediaView, UserManagementDashboardView,
+    ResendInvitationView, CancelAccountView
 )
 
 app_name = 'registry'
@@ -43,4 +44,6 @@ urlpatterns = [
     
     # User Management
     path('users/', UserManagementDashboardView.as_view(), name='user_management'),
+    path('users/<int:pk>/resend-invitation/', ResendInvitationView.as_view(), name='resend_invitation'),
+    path('users/<int:pk>/cancel/', CancelAccountView.as_view(), name='cancel_account'),
 ]

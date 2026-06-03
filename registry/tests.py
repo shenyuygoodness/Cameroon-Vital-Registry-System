@@ -175,7 +175,8 @@ class CLVRSTests(TestCase):
         self.client.force_login(self.officer_y1)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        
-        # Cleanup - Close response to release file handle on Windows
-        response.close()
+
+        # Consume streaming content to release the file handle without
+        # triggering request_finished signal (which would close the DB connection on PostgreSQL)
+        b''.join(response.streaming_content)
         os.remove(test_file_path)

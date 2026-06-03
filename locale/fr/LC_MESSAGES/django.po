@@ -2,9 +2,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CLVRS\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-27 15:30+0100\n"
-"PO-Revision-Date: 2026-05-27 15:30+0100\n"
-"Last-Translator: Antigravity\n"
+"POT-Creation-Date: 2026-05-31 00:00+0100\n"
+"PO-Revision-Date: 2026-05-31 00:00+0100\n"
+"Last-Translator: CLVRS Team\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -12,43 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-# Landing page & core navbar
-msgid "Welcome - CLVRS"
-msgstr "Bienvenue - CLVRS"
-
-msgid "Welcome to CLVRS"
-msgstr "Bienvenue sur CLVRS"
-
-msgid "The Cameroon Local Vital Registry System."
-msgstr "Le Système National d'Enregistrement de l'État Civil du Cameroun."
-
-msgid "A secure, decentralized, and modern infrastructure for civil status registration."
-msgstr "Une infrastructure sécurisée, décentralisée et moderne pour l'enregistrement de l'état civil."
-
-msgid "Access Portal"
-msgstr "Accéder au Portail"
-
-msgid "Learn More"
-msgstr "En savoir plus"
-
-msgid "Bank-Grade Security"
-msgstr "Sécurité de Niveau Bancaire"
-
-msgid "Cryptographic encryption for sensitive National ID data and strict role-based jurisdiction access."
-msgstr "Chiffrement cryptographique des données sensibles d'identifiant national et accès strict basé sur les rôles de juridiction."
-
-msgid "Decentralized Workflow"
-msgstr "Flux de Travail Décentralisé"
-
-msgid "Hospitals declare vital events directly, while local councils review, confirm, and register citizens instantly."
-msgstr "Les hôpitaux déclarent directement les événements vitaux, tandis que les conseils municipaux locaux vérifient, confirment et enregistrent les citoyens instantanément."
-
-msgid "Bilingual Certificates"
-msgstr "Actes Bilingues"
-
-msgid "Automatically generate beautifully formatted, legally compliant English and French certificates."
-msgstr "Génération automatique d'actes magnifiquement mis en page et conformes à la loi, en anglais et en français."
-
+# ── Navbar ──
 msgid "Dashboard"
 msgstr "Tableau de bord"
 
@@ -59,19 +23,19 @@ msgid "Pending Tasks"
 msgstr "Tâches en attente"
 
 msgid "Bulk Upload"
-msgstr "Téléchargement en bloc"
+msgstr "Importation en masse"
 
 msgid "User Management"
-msgstr "Gestion des Utilisateurs"
+msgstr "Gestion des utilisateurs"
 
 msgid "Declare Birth"
-msgstr "Déclarer une Naissance"
+msgstr "Déclarer une naissance"
 
 msgid "Declare Death"
-msgstr "Déclarer un Décès"
+msgstr "Déclarer un décès"
 
 msgid "My Profile"
-msgstr "Mon Profil"
+msgstr "Mon profil"
 
 msgid "Logout"
 msgstr "Déconnexion"
@@ -79,15 +43,18 @@ msgstr "Déconnexion"
 msgid "Login"
 msgstr "Connexion"
 
-# Authentication Page
+# ── Authentication ──
 msgid "System Authentication"
-msgstr "Authentification du Système"
+msgstr "Authentification du système"
 
 msgid "Cameroon Local Vital Registry System"
-msgstr "Système National d'Enregistrement de l'État Civil du Cameroun"
+msgstr "Système Local de Registre des Actes de l'État Civil du Cameroun"
 
 msgid "System ID / Username"
-msgstr "Identifiant Système / Nom d'utilisateur"
+msgstr "Identifiant système / Nom d'utilisateur"
+
+msgid "Email Address"
+msgstr "Adresse e-mail"
 
 msgid "Password"
 msgstr "Mot de passe"
@@ -98,18 +65,91 @@ msgstr "Se connecter"
 msgid "Authorized governmental personnel and citizens only."
 msgstr "Uniquement pour le personnel gouvernemental autorisé et les citoyens."
 
-# Profile page
+msgid "Secure Access"
+msgstr "Accès sécurisé"
+
+msgid "Sign in with your assigned credentials to continue."
+msgstr "Connectez-vous avec vos identifiants attribués pour continuer."
+
+# ── Landing page ──
+msgid "CLVRS — Civil Registry System"
+msgstr "CLVRS — Système de Registre Civil"
+
+msgid "Republic of Cameroon"
+msgstr "République du Cameroun"
+
+msgid "Civil Registry,"
+msgstr "Registre civil,"
+
+msgid "Digitized."
+msgstr "Numérisé."
+
+msgid "A secure, bilingual platform for birth and death registration across all 10 regions of Cameroon."
+msgstr "Une plateforme sécurisée et bilingue pour l'enregistrement des naissances et des décès dans les 10 régions du Cameroun."
+
+msgid "Access Portal"
+msgstr "Accéder au portail"
+
+msgid "Learn More"
+msgstr "En savoir plus"
+
+msgid "Explore Features"
+msgstr "Explorer les fonctionnalités"
+
+msgid "Regions"
+msgstr "Régions"
+
+msgid "Divisions"
+msgstr "Départements"
+
+msgid "Councils"
+msgstr "Communes"
+
+msgid "Languages"
+msgstr "Langues"
+
+msgid "What CLVRS Provides"
+msgstr "Ce que CLVRS offre"
+
+msgid "Built for Security & Compliance"
+msgstr "Conçu pour la Sécurité et la Conformité"
+
+msgid "Encrypted Records"
+msgstr "Enregistrements chiffrés"
+
+msgid "National ID numbers are stored with Fernet encryption and SHA-256 hashing. Sensitive data is never exposed in the database."
+msgstr "Les numéros CNI sont stockés avec le chiffrement Fernet et le hachage SHA-256. Les données sensibles ne sont jamais exposées dans la base de données."
+
+msgid "Official Certificates"
+msgstr "Certificats officiels"
+
+msgid "Bilingual birth and death certificates generated as PDFs — formatted to Cameroonian civil registration standards in English and French."
+msgstr "Actes de naissance et de décès bilingues générés en PDF — formatés selon les normes camerounaises d'état civil en anglais et en français."
+
+msgid "Full Audit Trail"
+msgstr "Piste d'audit complète"
+
+msgid "Every registration, approval, and export is logged with user, timestamp, and IP address. Complete traceability at every step."
+msgstr "Chaque enregistrement, approbation et exportation est journalisé avec l'utilisateur, l'horodatage et l'adresse IP. Traçabilité complète à chaque étape."
+
+msgid "Access the Registry"
+msgstr "Accéder au registre"
+
+msgid "Sign in with your assigned System ID and email to continue."
+msgstr "Connectez-vous avec votre identifiant système attribué et votre e-mail pour continuer."
+
+# ── Profile ──
 msgid "System ID (Username)"
-msgstr "Identifiant Système (Nom d'utilisateur)"
+msgstr "Identifiant système (Nom d'utilisateur)"
 
 msgid "Role"
 msgstr "Rôle"
 
 msgid "Full Name"
-msgstr "Nom Complet"
+msgstr "Nom complet"
 
 msgid "Email"
-msgstr "Adresse Email"
+msgstr "Adresse e-mail"
 
 msgid "Region"
 msgstr "Région"
@@ -123,24 +163,52 @@ msgstr "Hôpital"
 msgid "Change Password"
 msgstr "Modifier le mot de passe"
 
-msgid "Cancel"
-msgstr "Annuler"
-
 msgid "Update Password"
 msgstr "Mettre à jour le mot de passe"
 
-# User Management Dashboard
+msgid "Back to Dashboard"
+msgstr "Retour au tableau de bord"
+
+# ── Password / Activation ──
+msgid "Activate Your Account"
+msgstr "Activer votre compte"
+
+msgid "Activation Link Invalid"
+msgstr "Lien d'activation invalide"
+
+msgid "This activation link has expired or has already been used."
+msgstr "Ce lien d'activation a expiré ou a déjà été utilisé."
+
+msgid "Activation links are valid for 3 days. Please contact your administrator to request a new invitation."
+msgstr "Les liens d'activation sont valides 3 jours. Veuillez contacter votre administrateur pour demander une nouvelle invitation."
+
+msgid "Ask your administrator to use the 'Resend Invitation' option on your account."
+msgstr "Demandez à votre administrateur d'utiliser l'option « Renvoyer l'invitation » sur votre compte."
+
+msgid "System ID:"
+msgstr "Identifiant système :"
+
+msgid "Set a password for your account. You will use this password for all future sign-ins."
+msgstr "Définissez un mot de passe pour votre compte. Vous utiliserez ce mot de passe pour toutes vos connexions futures."
+
+msgid "Set Password & Activate Account"
+msgstr "Définir le mot de passe et activer le compte"
+
+msgid "Password must be at least 10 characters and not commonly used."
+msgstr "Le mot de passe doit comporter au moins 10 caractères et ne pas être couramment utilisé."
+
+# ── User Management ──
 msgid "User Management Dashboard"
-msgstr "Tableau de Bord de Gestion des Utilisateurs"
+msgstr "Tableau de bord de gestion des utilisateurs"
 
 msgid "Manage system access and provision new accounts."
-msgstr "Gérer l'accès au système et attribuer de nouveaux comptes."
+msgstr "Gérez l'accès au système et créez de nouveaux comptes."
 
 msgid "Regional Administrators"
-msgstr "Administrateurs Régionaux"
+msgstr "Administrateurs régionaux"
 
 msgid "New Regional Admin"
-msgstr "Nouvel Admin Régional"
+msgstr "Nouvel admin régional"
 
 msgid "Region-ID"
 msgstr "ID-Région"
@@ -149,25 +217,25 @@ msgid "Name"
 msgstr "Nom"
 
 msgid "Region Assigned"
-msgstr "Région Assignée"
+msgstr "Région assignée"
 
 msgid "No Regional Admins found."
 msgstr "Aucun administrateur régional trouvé."
 
 msgid "Provision Regional Admin"
-msgstr "Créer un Administrateur Régional"
+msgstr "Créer un administrateur régional"
 
-msgid "Region-ID and a default password will be automatically generated upon creation."
-msgstr "L'ID-Région et un mot de passe par défaut seront générés automatiquement lors de la création."
+msgid "Region-ID and an invitation email will be sent upon account creation."
+msgstr "Un ID-Région et un e-mail d'invitation seront envoyés lors de la création du compte."
 
 msgid "Create Account"
 msgstr "Créer le compte"
 
 msgid "Council Officers"
-msgstr "Officiers d'État Civil"
+msgstr "Officiers d'état civil"
 
 msgid "New Officer"
-msgstr "Nouvel Officier"
+msgstr "Nouvel officier"
 
 msgid "Council-ID"
 msgstr "ID-Commune"
@@ -179,27 +247,39 @@ msgid "No Council Officers found."
 msgstr "Aucun officier d'état civil trouvé."
 
 msgid "Hospital Staff"
-msgstr "Personnel Hospitalier"
+msgstr "Personnel hospitalier"
 
 msgid "New Staff"
-msgstr "Nouveau Personnel"
+msgstr "Nouveau personnel"
 
 msgid "Hospital-ID"
 msgstr "ID-Hôpital"
 
 msgid "Hospital Name"
-msgstr "Nom de l'Hôpital"
+msgstr "Nom de l'hôpital"
 
 msgid "No Hospital Staff found."
 msgstr "Aucun personnel hospitalier trouvé."
 
 msgid "Provision Council Officer"
-msgstr "Créer un Officier d'État Civil"
+msgstr "Créer un officier d'état civil"
 
 msgid "Provision Hospital Staff"
-msgstr "Créer un Personnel Hospitalier"
+msgstr "Créer un personnel hospitalier"
 
-# Dashboard & KPIs
+msgid "Pending Activation"
+msgstr "Activation en attente"
+
+msgid "System ID"
+msgstr "Identifiant système"
+
+msgid "Resend"
+msgstr "Renvoyer"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+# ── Dashboard ──
 msgid "Welcome back"
 msgstr "Bon retour"
 
@@ -210,51 +290,587 @@ msgid "Facility"
 msgstr "Établissement"
 
 msgid "Registered Citizens"
-msgstr "Citoyens Enregistrés"
+msgstr "Citoyens enregistrés"
 
 msgid "Alive and Deceased"
-msgstr "Vivants et Décédés"
+msgstr "Vivants et décédés"
 
 msgid "Pending Births"
-msgstr "Naissances en Attente"
+msgstr "Naissances en attente"
 
 msgid "Needs Confirmation"
-msgstr "Nécessite Confirmation"
+msgstr "Nécessite confirmation"
 
 msgid "Pending Deaths"
-msgstr "Décès en Attente"
+msgstr "Décès en attente"
 
 msgid "Total Households"
-msgstr "Total des Ménages"
+msgstr "Total des ménages"
 
 msgid "Registered Families"
-msgstr "Familles Enregistrées"
+msgstr "Familles enregistrées"
 
-# Role displays (lazy translated)
-msgid "Super Admin"
-msgstr "Super Administrateur"
+msgid "Regional Admin Actions"
+msgstr "Actions de l'administrateur régional"
 
-msgid "Regional Admin"
-msgstr "Administrateur Régional"
+msgid "User Management (Provision Accounts)"
+msgstr "Gestion des utilisateurs (créer des comptes)"
 
-msgid "Council Officer (Subdivision)"
-msgstr "Officier d'État Civil (Arrondissement)"
+msgid "Subdivision Distribution in %(name)s Region"
+msgstr "Distribution des arrondissements dans la région %(name)s"
 
-msgid "Hospital Staff"
-msgstr "Personnel Hospitalier"
+msgid "No subdivision data available."
+msgstr "Aucune donnée d'arrondissement disponible."
+
+msgid "Regional Registry Notice"
+msgstr "Avis du registre régional"
+
+msgid "Privacy & Compliance Enforced"
+msgstr "Confidentialité et conformité appliquées"
+
+msgid "Note:"
+msgstr "Note :"
+
+msgid "Under Cameroonian data privacy rules, individual records, certificates, and pending declaration workflows are restricted to Local Subdivision Officers."
+msgstr "Conformément aux règles camerounaises de confidentialité des données, les dossiers individuels, certificats et flux de déclarations en attente sont réservés aux officiers d'état civil locaux."
+
+msgid "Subdivision Actions"
+msgstr "Actions de l'arrondissement"
+
+msgid "Register New Citizen"
+msgstr "Enregistrer un nouveau citoyen"
+
+msgid "Review Pending Declarations"
+msgstr "Examiner les déclarations en attente"
+
+msgid "Bulk Excel Upload"
+msgstr "Importation Excel en masse"
+
+msgid "Export Citizens (CSV)"
+msgstr "Exporter les citoyens (CSV)"
+
+msgid "Pending Birth Declarations"
+msgstr "Déclarations de naissance en attente"
+
+msgid "Dec #"
+msgstr "N° Acte"
+
+msgid "Child Name"
+msgstr "Nom de l'enfant"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Undecided"
+msgstr "Non déterminé"
+
+msgid "No pending birth declarations."
+msgstr "Aucune déclaration de naissance en attente."
+
+msgid "Review"
+msgstr "Examiner"
+
+msgid "Pending Death Declarations"
+msgstr "Déclarations de décès en attente"
 
 msgid "Citizen"
 msgstr "Citoyen"
 
-# Model choice displays (lazy translated)
+msgid "No pending death declarations."
+msgstr "Aucune déclaration de décès en attente."
+
+msgid "Subdivision Demographics (Top 5)"
+msgstr "Démographie des arrondissements (Top 5)"
+
+msgid "Facility Registration Portal"
+msgstr "Portail d'enregistrement de l'établissement"
+
+msgid "Directly declare vital events occurring at <strong>%(name)s</strong>."
+msgstr "Déclarez directement les événements vitaux survenant à <strong>%(name)s</strong>."
+
+msgid "Declare Live Birth"
+msgstr "Déclarer une naissance vivante"
+
+msgid "Your Recent Birth Declarations"
+msgstr "Vos récentes déclarations de naissance"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "No births declared yet."
+msgstr "Aucune naissance déclarée pour le moment."
+
+msgid "Your Recent Death Declarations"
+msgstr "Vos récentes déclarations de décès"
+
+msgid "No deaths declared yet."
+msgstr "Aucun décès déclaré pour le moment."
+
+msgid "My Profile Details"
+msgstr "Mes informations de profil"
+
+msgid "Profile Picture"
+msgstr "Photo de profil"
+
+msgid "Under 18 (No NIC)"
+msgstr "Moins de 18 ans (Pas de CNI)"
+
+msgid "Council Subdivision"
+msgstr "Commune de l'arrondissement"
+
+msgid "Official Birth Certificate"
+msgstr "Acte de naissance officiel"
+
+msgid "Download your digitally signed, subdivision-sealed official document."
+msgstr "Téléchargez votre document officiel signé numériquement et scellé par la commune."
+
+msgid "Download PDF"
+msgstr "Télécharger le PDF"
+
+msgid "Unlinked or Pending confirmation"
+msgstr "Non lié ou en attente de confirmation"
+
+msgid "Household Number:"
+msgstr "Numéro du ménage :"
+
+msgid "Head of Household:"
+msgstr "Chef de ménage :"
+
+msgid "You are not linked to any household registry."
+msgstr "Vous n'êtes rattaché(e) à aucun registre de ménage."
+
+msgid "My Under-18 Children (Certificates)"
+msgstr "Mes enfants de moins de 18 ans (Certificats)"
+
+msgid "DOB"
+msgstr "DDN"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Download Certificate"
+msgstr "Télécharger le certificat"
+
+msgid "Your user account is not linked to an active Citizen record. Please contact your Local Subdivision Council to link your National ID."
+msgstr "Votre compte n'est pas lié à un enregistrement de citoyen actif. Veuillez contacter votre commune locale pour lier votre numéro national d'identité."
+
+msgid "Registered Population"
+msgstr "Population enregistrée"
+
+# ── Citizen List ──
+msgid "Citizens Registry"
+msgstr "Registre des citoyens"
+
+msgid "Citizen Registry"
+msgstr "Registre des citoyens"
+
+msgid "Search Names / NIC"
+msgstr "Rechercher noms / CNI"
+
+msgid "Search by name or NIC..."
+msgstr "Rechercher par nom ou CNI..."
+
+msgid "All Genders"
+msgstr "Tous les genres"
+
+msgid "All Statuses"
+msgstr "Tous les statuts"
+
+msgid "All Subdivisions"
+msgstr "Tous les arrondissements"
+
+msgid "Apply Filters"
+msgstr "Appliquer les filtres"
+
+msgid "Reset"
+msgstr "Réinitialiser"
+
+msgid "Citizen Records (%(count)s found)"
+msgstr "Enregistrements (%(count)s trouvés)"
+
+msgid "NIC (CNI)"
+msgstr "CNI"
+
+msgid "Date of Birth"
+msgstr "Date de naissance"
+
+msgid "Age"
+msgstr "Âge"
+
+msgid "Under-18"
+msgstr "Moins de 18 ans"
+
+msgid "%(age)s Yrs"
+msgstr "%(age)s Ans"
+
+msgid "View"
+msgstr "Voir"
+
+msgid "Edit"
+msgstr "Modifier"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "Are you sure you want to soft-delete this record?"
+msgstr "Êtes-vous sûr de vouloir archiver cet enregistrement ?"
+
+msgid "No citizens registered matching these criteria."
+msgstr "Aucun citoyen enregistré ne correspond à ces critères."
+
+msgid "First"
+msgstr "Premier"
+
+msgid "Previous"
+msgstr "Précédent"
+
+msgid "Page %(page)s of %(total)s"
+msgstr "Page %(page)s sur %(total)s"
+
+msgid "Next"
+msgstr "Suivant"
+
+msgid "Last"
+msgstr "Dernier"
+
+msgid "Export to CSV"
+msgstr "Exporter en CSV"
+
+# ── Citizen Form ──
+msgid "Edit Citizen: %(name)s"
+msgstr "Modifier le citoyen : %(name)s"
+
+msgid "Edit Citizen Record / Modifier la Fiche"
+msgstr "Modifier la fiche citoyen / Modifier la Fiche"
+
+msgid "Register New Citizen / Enregistrer un Citoyen"
+msgstr "Enregistrer un nouveau citoyen / Enregistrer un Citoyen"
+
+msgid "NIC Required:"
+msgstr "CNI obligatoire :"
+
+msgid "Only required for age 18 and above. Must be blank for under-18."
+msgstr "Obligatoire pour les personnes de 18 ans et plus. Doit être vide pour les moins de 18 ans."
+
+msgid "Save Record"
+msgstr "Enregistrer"
+
+# ── Citizen Detail ──
+msgid "Citizen Details"
+msgstr "Détails du citoyen"
+
+msgid "Back to Registry"
+msgstr "Retour au registre"
+
+msgid "Citizen File"
+msgstr "Fiche citoyenne"
+
+msgid "Citizen Photo"
+msgstr "Photo du citoyen"
+
+msgid "%(age)s Years"
+msgstr "%(age)s Ans"
+
+msgid "Date of Death"
+msgstr "Date de décès"
+
+msgid "Edit File"
+msgstr "Modifier la fiche"
+
+msgid "Available Official Certificates"
+msgstr "Certificats officiels disponibles"
+
+msgid "Birth Certificate / Acte de Naissance"
+msgstr "Acte de naissance / Birth Certificate"
+
+msgid "Click to preview and download certified PDF"
+msgstr "Cliquer pour prévisualiser et télécharger le PDF certifié"
+
+msgid "Download Birth Certificate"
+msgstr "Télécharger l'acte de naissance"
+
+msgid "No confirmed birth record."
+msgstr "Aucun acte de naissance confirmé."
+
+msgid "Death Certificate / Acte de Décès"
+msgstr "Acte de décès / Death Certificate"
+
+msgid "Certified copy of death register"
+msgstr "Copie certifiée du registre des décès"
+
+msgid "Download Death Certificate"
+msgstr "Télécharger l'acte de décès"
+
+msgid "No confirmed death record."
+msgstr "Aucun acte de décès confirmé."
+
+msgid "Lineage / Parents"
+msgstr "Filiation / Parents"
+
+msgid "Father / Père"
+msgstr "Père / Father"
+
+msgid "Mother / Mère"
+msgstr "Mère / Mother"
+
+msgid "Father not registered or linked."
+msgstr "Père non enregistré ou non lié."
+
+msgid "Mother not registered or linked."
+msgstr "Mère non enregistrée ou non liée."
+
+msgid "Household Membership"
+msgstr "Appartenance au ménage"
+
+msgid "Head:"
+msgstr "Chef :"
+
+msgid "Relationship"
+msgstr "Relation"
+
+msgid "Current File"
+msgstr "Fiche actuelle"
+
+msgid "This citizen is not registered under any household."
+msgstr "Ce citoyen n'est rattaché à aucun ménage."
+
+msgid "Security & Audit History"
+msgstr "Historique de sécurité et d'audit"
+
+msgid "Timestamp"
+msgstr "Horodatage"
+
+msgid "No audit logs for this record."
+msgstr "Aucun journal d'audit pour cet enregistrement."
+
+msgid "System"
+msgstr "Système"
+
+# ── Declaration Form ──
+msgid "Submit Birth Declaration / Déclaration de Naissance"
+msgstr "Soumettre une déclaration de naissance / Submit Birth Declaration"
+
+msgid "Submit Death Declaration / Déclaration de Décès"
+msgstr "Soumettre une déclaration de décès / Submit Death Declaration"
+
+msgid "Will remain in PENDING status until approved by the Local Council Officer."
+msgstr "Restera en statut EN ATTENTE jusqu'à approbation par l'officier d'état civil local."
+
+msgid "Guidelines:"
+msgstr "Instructions :"
+
+msgid "Child name fields are optional. If names are not yet chosen, leave them blank. They can be entered by the council during final registration."
+msgstr "Les champs de nom de l'enfant sont facultatifs. Si les noms ne sont pas encore choisis, laissez-les vides. Ils pourront être saisis par la commune lors de l'enregistrement final."
+
+msgid "Mother's full name and CNI are mandatory. Father's info is optional."
+msgstr "Le nom complet et le CNI de la mère sont obligatoires. Les informations du père sont facultatives."
+
+msgid "Under-18 children do not require a National ID."
+msgstr "Les enfants de moins de 18 ans n'ont pas besoin d'un numéro national d'identité."
+
+msgid "Verify that the deceased citizen's CNI and name match their official profile."
+msgstr "Vérifiez que le CNI et le nom du citoyen décédé correspondent à son profil officiel."
+
+msgid "A death declaration will mark the citizen profile status to 'Deceased' upon approval. This action is irreversible."
+msgstr "Une déclaration de décès marquera le profil du citoyen comme « Décédé » après approbation. Cette action est irréversible."
+
+msgid "Submit Declaration"
+msgstr "Soumettre la déclaration"
+
+# ── Bulk Import ──
+msgid "Bulk Import Citizens"
+msgstr "Importation en masse des citoyens"
+
+msgid "Back to Citizens"
+msgstr "Retour aux citoyens"
+
+msgid "Bulk Citizen Upload (Excel / CSV)"
+msgstr "Importation en masse des citoyens (Excel / CSV)"
+
+msgid "Import citizen rosters securely. Database actions are atomic (all-or-nothing)."
+msgstr "Importez des listes de citoyens en toute sécurité. Les actions de base de données sont atomiques (tout ou rien)."
+
+msgid "Step 1: Download Template"
+msgstr "Étape 1 : Télécharger le modèle"
+
+msgid "Please download our standardized Excel template first to ensure the columns match CLVRS system schemas exactly."
+msgstr "Veuillez d'abord télécharger notre modèle Excel standardisé pour vous assurer que les colonnes correspondent exactement aux schémas du système CLVRS."
+
+msgid "Download Excel Template (.xlsx)"
+msgstr "Télécharger le modèle Excel (.xlsx)"
+
+msgid "Required Columns & Constraints:"
+msgstr "Colonnes obligatoires et contraintes :"
+
+msgid "Citizen names."
+msgstr "Noms des citoyens."
+
+msgid "Date of birth (Format: YYYY-MM-DD)."
+msgstr "Date de naissance (Format : AAAA-MM-JJ)."
+
+msgid "Must be M or F (or Male/Female)."
+msgstr "Doit être M ou F (ou Masculin/Féminin)."
+
+msgid "Required for citizens age 18 and above. Must be blank for under-18. Length 9-20 characters."
+msgstr "Obligatoire pour les citoyens de 18 ans et plus. Doit être vide pour les moins de 18 ans. Longueur 9 à 20 caractères."
+
+msgid "If specified, the parent must already exist in the database (NIC hash exact lookup)."
+msgstr "Si spécifié, le parent doit déjà exister dans la base de données (recherche exacte par hachage CNI)."
+
+msgid "Step 2: Upload File"
+msgstr "Étape 2 : Télécharger le fichier"
+
+msgid "Select Subdivision Council"
+msgstr "Sélectionner la commune"
+
+msgid "Choose Subdivision"
+msgstr "Choisir l'arrondissement"
+
+msgid "Choose Excel or CSV file"
+msgstr "Choisir un fichier Excel ou CSV"
+
+msgid "Upload and Process"
+msgstr "Télécharger et traiter"
+
+msgid "Import Validation Errors Detected"
+msgstr "Erreurs de validation d'importation détectées"
+
+msgid "The transaction was rolled back. No citizens were added to the database. Fix these errors in your file and try again."
+msgstr "La transaction a été annulée. Aucun citoyen n'a été ajouté à la base de données. Corrigez ces erreurs dans votre fichier et réessayez."
+
+msgid "Validation Issue / Failure Message"
+msgstr "Problème de validation / Message d'erreur"
+
+# ── Pending Declarations ──
+msgid "Pending Review Tasks"
+msgstr "Tâches en attente de révision"
+
+msgid "Pending Declarations Review"
+msgstr "Révision des déclarations en attente"
+
+msgid "Review, confirm, or reject declarations submitted by Hospital facilities in your Subdivision."
+msgstr "Examinez, confirmez ou rejetez les déclarations soumises par les établissements hospitaliers de votre arrondissement."
+
+msgid "Birth Declarations"
+msgstr "Déclarations de naissance"
+
+msgid "Death Declarations"
+msgstr "Déclarations de décès"
+
+msgid "Dec #:"
+msgstr "N° Acte :"
+
+msgid "Pending Review"
+msgstr "En attente de révision"
+
+msgid "New Birth Declaration"
+msgstr "Nouvelle déclaration de naissance"
+
+msgid "New Death Declaration"
+msgstr "Nouvelle déclaration de décès"
+
+msgid "Child Names:"
+msgstr "Noms de l'enfant :"
+
+msgid "Unnamed (Decide later)"
+msgstr "Sans nom (à décider plus tard)"
+
+msgid "DOB / Gender:"
+msgstr "DDN / Genre :"
+
+msgid "Mother Info:"
+msgstr "Info mère :"
+
+msgid "Father Info:"
+msgstr "Info père :"
+
+msgid "Declared By:"
+msgstr "Déclaré par :"
+
+msgid "Remarks:"
+msgstr "Observations :"
+
+msgid "Child First Name (Editable)"
+msgstr "Prénom de l'enfant (modifiable)"
+
+msgid "Child Last Name (Editable)"
+msgstr "Nom de l'enfant (modifiable)"
+
+msgid "First Name"
+msgstr "Prénom"
+
+msgid "Last Name"
+msgstr "Nom de famille"
+
+msgid "Confirm & Register Citizen"
+msgstr "Confirmer et enregistrer le citoyen"
+
+msgid "Reject"
+msgstr "Rejeter"
+
+msgid "Reason for Rejection"
+msgstr "Motif du rejet"
+
+msgid "Provide reason to return to hospital staff..."
+msgstr "Fournissez un motif de retour au personnel hospitalier..."
+
+msgid "Submit Rejection"
+msgstr "Soumettre le rejet"
+
+msgid "No pending birth declarations to review."
+msgstr "Aucune déclaration de naissance en attente de révision."
+
+msgid "Citizen Deceased:"
+msgstr "Citoyen décédé :"
+
+msgid "DOB / Age:"
+msgstr "DDN / Âge :"
+
+msgid "Age: %(age)s"
+msgstr "Âge : %(age)s"
+
+msgid "Date / Place:"
+msgstr "Date / Lieu :"
+
+msgid "Cause of Death:"
+msgstr "Cause du décès :"
+
+msgid "Declarant Info:"
+msgstr "Info déclarant :"
+
+msgid "Confirm & Mark Deceased"
+msgstr "Confirmer et marquer décédé"
+
+msgid "No pending death declarations to review."
+msgstr "Aucune déclaration de décès en attente de révision."
+
+# ── Role & Model labels (lazy translated in models) ──
+msgid "Super Admin"
+msgstr "Super administrateur"
+
+msgid "Regional Admin"
+msgstr "Administrateur régional"
+
+msgid "Council Officer (Subdivision)"
+msgstr "Officier d'état civil (Arrondissement)"
+
+msgid "Hospital Staff"
+msgstr "Personnel hospitalier"
+
 msgid "Male"
-msgstr "Homme"
+msgstr "Masculin"
 
 msgid "Female"
-msgstr "Femme"
+msgstr "Féminin"
 
 msgid "Alive"
 msgstr "Vivant"
 
 msgid "Deceased"
 msgstr "Décédé"
+
+msgid "Gender"
+msgstr "Genre"

@@ -16,12 +16,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import HttpResponse
 from accounts.views import DashboardRedirectView, LandingPageView
 from django.conf import settings
 from django.conf.urls.static import static
 
+
+def security_txt(request):
+    content = (
+        "Contact: mailto:security@clvrs.cm\n"
+        "Preferred-Languages: en, fr\n"
+        "Policy: https://clvrs.cm/security-policy\n"
+    )
+    return HttpResponse(content, content_type='text/plain')
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('clvrs-admin-portal/', admin.site.urls),
+    path('.well-known/security.txt', security_txt),
     path('i18n/', include('django.conf.urls.i18n')),
     path('', include('accounts.urls')),
     path('', LandingPageView.as_view(), name='home'),

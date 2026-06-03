@@ -1,209 +1,198 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Pending Review Tasks - CLVRS{% endblock %}
+{% block title %}{% trans "Pending Review Tasks" %} - CLVRS{% endblock %}
 
 {% block content %}
+<div class="mb-3">
+    <a href="{% url 'registry:dashboard' %}" class="btn btn-outline-secondary">&larr; {% trans "Back to Dashboard" %}</a>
+</div>
 <div class="mb-4">
-    <h2>Pending Declarations Review</h2>
-    <p class="text-muted">Review, confirm, or reject declarations submitted by Hospital facilities in your Subdivision.</p>
+    <h2>{% trans "Pending Declarations Review" %}</h2>
+    <p class="text-muted">{% trans "Review, confirm, or reject declarations submitted by Hospital facilities in your Subdivision." %}</p>
 </div>
 
-<!-- Tabs Navigation -->
 <ul class="nav nav-tabs mb-4" id="pendingTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active position-relative font-weight-bold" id="births-tab" data-bs-toggle="tab" data-bs-target="#births" type="button" role="tab" aria-controls="births" aria-selected="true">
-            Birth Declarations
-            {% if pending_births %}
-                <span class="badge bg-danger ms-1">{{ pending_births.count }}</span>
-            {% endif %}
+        <button class="nav-link active position-relative font-weight-bold" id="births-tab" data-bs-toggle="tab" data-bs-target="#births" type="button" role="tab">
+            {% trans "Birth Declarations" %}
+            {% if pending_births %}<span class="badge bg-danger ms-1">{{ pending_births.count }}</span>{% endif %}
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link position-relative font-weight-bold" id="deaths-tab" data-bs-toggle="tab" data-bs-target="#deaths" type="button" role="tab" aria-controls="deaths" aria-selected="false">
-            Death Declarations
-            {% if pending_deaths %}
-                <span class="badge bg-danger ms-1">{{ pending_deaths.count }}</span>
-            {% endif %}
+        <button class="nav-link position-relative font-weight-bold" id="deaths-tab" data-bs-toggle="tab" data-bs-target="#deaths" type="button" role="tab">
+            {% trans "Death Declarations" %}
+            {% if pending_deaths %}<span class="badge bg-danger ms-1">{{ pending_deaths.count }}</span>{% endif %}
         </button>
     </li>
 </ul>
 
-<!-- Tabs Content -->
 <div class="tab-content" id="pendingTabsContent">
+
     <!-- BIRTH DECLARATIONS -->
-    <div class="tab-pane fade show active" id="births" role="tabpanel" aria-labelledby="births-tab">
+    <div class="tab-pane fade show active" id="births" role="tabpanel">
         <div class="row">
             {% for dec in pending_births %}
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm border-start border-success border-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Dec #: <strong>{{ dec.declaration_number }}</strong></span>
-                            <span class="badge bg-warning text-dark">Pending Review</span>
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-start border-success border-4">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>{% trans "Dec #:" %} <strong>{{ dec.declaration_number }}</strong></span>
+                        <span class="badge bg-warning text-dark">{% trans "Pending Review" %}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-success mb-3">{% trans "New Birth Declaration" %}</h5>
+                        <table class="table table-sm table-borderless small mb-3">
+                            <tr>
+                                <td class="font-weight-bold text-muted" style="width:130px;">{% trans "Child Names:" %}</td>
+                                <td>
+                                    {% if dec.child_first_name or dec.child_last_name %}
+                                        <strong>{{ dec.child_first_name }} {{ dec.child_last_name }}</strong>
+                                    {% else %}
+                                        <span class="text-muted italic">{% trans "Unnamed (Decide later)" %}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "DOB / Gender:" %}</td>
+                                <td>{{ dec.child_dob }} / {{ dec.get_child_gender_display }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Mother Info:" %}</td>
+                                <td>{{ dec.mother_name }} (NIC: {{ dec.mother_national_id }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Father Info:" %}</td>
+                                <td>{{ dec.father_name|default:"N/A" }} (NIC: {{ dec.father_national_id|default:"N/A" }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Declared By:" %}</td>
+                                <td>{{ dec.created_by.get_full_name }} ({{ dec.place_of_birth }})</td>
+                            </tr>
+                            {% if dec.remarks %}
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Remarks:" %}</td>
+                                <td>{{ dec.remarks }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+
+                        <hr>
+                        <div class="d-flex gap-2 justify-content-between">
+                            <form action="{% url 'registry:birth_review' dec.pk %}" method="post" class="flex-grow-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="confirm">
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted mb-0">{% trans "Child First Name (Editable)" %}</label>
+                                    <input type="text" name="child_first_name" class="form-control form-control-sm" value="{{ dec.child_first_name }}" placeholder="{% trans "First Name" %}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted mb-0">{% trans "Child Last Name (Editable)" %}</label>
+                                    <input type="text" name="child_last_name" class="form-control form-control-sm" value="{{ dec.child_last_name }}" placeholder="{% trans "Last Name" %}">
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-success w-100 py-2">{% trans "Confirm & Register Citizen" %}</button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger py-2" type="button" data-bs-toggle="collapse" data-bs-target="#rejectBirthForm{{ dec.id }}">
+                                {% trans "Reject" %}
+                            </button>
                         </div>
-                        <div class="card-body">
-                            <h5 class="card-title text-success mb-3">New Birth Declaration</h5>
-                            
-                            <table class="table table-sm table-borderless small mb-3">
-                                <tr>
-                                    <td class="font-weight-bold text-muted" style="width: 130px;">Child Names:</td>
-                                    <td>
-                                        {% if dec.child_first_name or dec.child_last_name %}
-                                            <strong>{{ dec.child_first_name }} {{ dec.child_last_name }}</strong>
-                                        {% else %}
-                                            <span class="text-muted italic">Unnamed (Decide later)</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">DOB / Gender:</td>
-                                    <td>{{ dec.child_dob }} / {{ dec.get_child_gender_display }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Mother Info:</td>
-                                    <td>{{ dec.mother_name }} (NIC: {{ dec.mother_national_id }})</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Father Info:</td>
-                                    <td>{{ dec.father_name|default:"N/A" }} (NIC: {{ dec.father_national_id|default:"N/A" }})</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Declared By:</td>
-                                    <td>{{ dec.created_by.get_full_name }} ({{ dec.place_of_birth }})</td>
-                                </tr>
-                                {% if dec.remarks %}
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Remarks:</td>
-                                    <td>{{ dec.remarks }}</td>
-                                </tr>
-                                {% endif %}
-                            </table>
-                            
-                            <hr>
-                            
-                            <!-- Action Forms -->
-                            <div class="d-flex gap-2 justify-content-between">
-                                <form action="{% url 'registry:birth_review' dec.pk %}" method="post" class="flex-grow-1">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="confirm">
-                                    <div class="mb-2">
-                                        <label class="form-label small text-muted mb-0">Child First Name (Editable)</label>
-                                        <input type="text" name="child_first_name" class="form-control form-control-sm" value="{{ dec.child_first_name }}" placeholder="First Name">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small text-muted mb-0">Child Last Name (Editable)</label>
-                                        <input type="text" name="child_last_name" class="form-control form-control-sm" value="{{ dec.child_last_name }}" placeholder="Last Name">
-                                    </div>
-                                    <button type="submit" class="btn btn-sm btn-success w-100 py-2">Confirm & Register Citizen</button>
-                                </form>
-                                
-                                <button class="btn btn-sm btn-outline-danger py-2" type="button" data-bs-toggle="collapse" data-bs-target="#rejectBirthForm{{ dec.id }}">
-                                    Reject
-                                </button>
-                            </div>
-                            
-                            <!-- Rejection Reason Collapse -->
-                            <div class="collapse mt-3" id="rejectBirthForm{{ dec.id }}">
-                                <form action="{% url 'registry:birth_review' dec.pk %}" method="post" class="bg-light p-3 border rounded">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="reject">
-                                    <div class="mb-2">
-                                        <label class="form-label small font-weight-bold text-danger">Reason for Rejection</label>
-                                        <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required placeholder="Provide reason to return to hospital staff..."></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-xs btn-danger w-100">Submit Rejection</button>
-                                </form>
-                            </div>
+
+                        <div class="collapse mt-3" id="rejectBirthForm{{ dec.id }}">
+                            <form action="{% url 'registry:birth_review' dec.pk %}" method="post" class="bg-light p-3 border rounded">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="mb-2">
+                                    <label class="form-label small font-weight-bold text-danger">{% trans "Reason for Rejection" %}</label>
+                                    <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required placeholder="{% trans "Provide reason to return to hospital staff..." %}"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-xs btn-danger w-100">{% trans "Submit Rejection" %}</button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
             {% empty %}
-                <div class="col-12 text-center py-5 text-muted">
-                    <h5>No pending birth declarations to review.</h5>
-                </div>
+            <div class="col-12 text-center py-5 text-muted">
+                <h5>{% trans "No pending birth declarations to review." %}</h5>
+            </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- DEATH DECLARATIONS -->
-    <div class="tab-pane fade" id="deaths" role="tabpanel" aria-labelledby="deaths-tab">
+    <div class="tab-pane fade" id="deaths" role="tabpanel">
         <div class="row">
             {% for dec in pending_deaths %}
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm border-start border-danger border-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Dec #: <strong>{{ dec.declaration_number }}</strong></span>
-                            <span class="badge bg-warning text-dark">Pending Review</span>
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-start border-danger border-4">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>{% trans "Dec #:" %} <strong>{{ dec.declaration_number }}</strong></span>
+                        <span class="badge bg-warning text-dark">{% trans "Pending Review" %}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-danger mb-3">{% trans "New Death Declaration" %}</h5>
+                        <table class="table table-sm table-borderless small mb-3">
+                            <tr>
+                                <td class="font-weight-bold text-muted" style="width:130px;">{% trans "Citizen Deceased:" %}</td>
+                                <td><strong>{{ dec.citizen.get_full_name }}</strong> (NIC: {{ dec.citizen.national_id|default:_("Under-18") }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "DOB / Age:" %}</td>
+                                <td>{{ dec.citizen.dob }} ({% blocktrans with age=dec.citizen.age %}Age: {{ age }}{% endblocktrans %})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Date / Place:" %}</td>
+                                <td>{{ dec.death_date }} / {{ dec.place_of_death }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Cause of Death:" %}</td>
+                                <td>{{ dec.death_cause }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Declarant Info:" %}</td>
+                                <td>{{ dec.declarant_name }} ({{ dec.declarant_relation }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Declared By:" %}</td>
+                                <td>{{ dec.created_by.get_full_name }}</td>
+                            </tr>
+                            {% if dec.remarks %}
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Remarks:" %}</td>
+                                <td>{{ dec.remarks }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+
+                        <hr>
+                        <div class="d-flex gap-2 justify-content-between">
+                            <form action="{% url 'registry:death_review' dec.pk %}" method="post" class="flex-grow-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="confirm">
+                                <button type="submit" class="btn btn-sm btn-success w-100 py-2">{% trans "Confirm & Mark Deceased" %}</button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger py-2" type="button" data-bs-toggle="collapse" data-bs-target="#rejectDeathForm{{ dec.id }}">
+                                {% trans "Reject" %}
+                            </button>
                         </div>
-                        <div class="card-body">
-                            <h5 class="card-title text-danger mb-3">New Death Declaration</h5>
-                            
-                            <table class="table table-sm table-borderless small mb-3">
-                                <tr>
-                                    <td class="font-weight-bold text-muted" style="width: 130px;">Citizen Deceased:</td>
-                                    <td><strong>{{ dec.citizen.get_full_name }}</strong> (NIC: {{ dec.citizen.national_id|default:"Under-18" }})</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">DOB / Age:</td>
-                                    <td>{{ dec.citizen.dob }} (Age: {{ dec.citizen.age }})</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Date / Place:</td>
-                                    <td>{{ dec.death_date }} / {{ dec.place_of_death }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Cause of Death:</td>
-                                    <td>{{ dec.death_cause }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Declarant Info:</td>
-                                    <td>{{ dec.declarant_name }} ({{ dec.declarant_relation }})</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Declared By:</td>
-                                    <td>{{ dec.created_by.get_full_name }}</td>
-                                </tr>
-                                {% if dec.remarks %}
-                                <tr>
-                                    <td class="font-weight-bold text-muted">Remarks:</td>
-                                    <td>{{ dec.remarks }}</td>
-                                </tr>
-                                {% endif %}
-                            </table>
-                            
-                            <hr>
-                            
-                            <!-- Action Forms -->
-                            <div class="d-flex gap-2 justify-content-between">
-                                <form action="{% url 'registry:death_review' dec.pk %}" method="post" class="flex-grow-1">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="confirm">
-                                    <button type="submit" class="btn btn-sm btn-success w-100 py-2">Confirm & Mark Deceased</button>
-                                </form>
-                                
-                                <button class="btn btn-sm btn-outline-danger py-2" type="button" data-bs-toggle="collapse" data-bs-target="#rejectDeathForm{{ dec.id }}">
-                                    Reject
-                                </button>
-                            </div>
-                            
-                            <!-- Rejection Reason Collapse -->
-                            <div class="collapse mt-3" id="rejectDeathForm{{ dec.id }}">
-                                <form action="{% url 'registry:death_review' dec.pk %}" method="post" class="bg-light p-3 border rounded">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="reject">
-                                    <div class="mb-2">
-                                        <label class="form-label small font-weight-bold text-danger">Reason for Rejection</label>
-                                        <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required placeholder="Provide reason to return to hospital staff..."></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-xs btn-danger w-100">Submit Rejection</button>
-                                </form>
-                            </div>
+
+                        <div class="collapse mt-3" id="rejectDeathForm{{ dec.id }}">
+                            <form action="{% url 'registry:death_review' dec.pk %}" method="post" class="bg-light p-3 border rounded">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="mb-2">
+                                    <label class="form-label small font-weight-bold text-danger">{% trans "Reason for Rejection" %}</label>
+                                    <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required placeholder="{% trans "Provide reason to return to hospital staff..." %}"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-xs btn-danger w-100">{% trans "Submit Rejection" %}</button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
             {% empty %}
-                <div class="col-12 text-center py-5 text-muted">
-                    <h5>No pending death declarations to review.</h5>
-                </div>
+            <div class="col-12 text-center py-5 text-muted">
+                <h5>{% trans "No pending death declarations to review." %}</h5>
+            </div>
             {% endfor %}
         </div>
     </div>

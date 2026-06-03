@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Activate Your Account" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 65vh;">
+    <div class="col-md-5">
+
+        {% if invalid %}
+        <!-- ── Expired / Invalid token ── -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-danger text-white text-center py-3">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>{% trans "Activation Link Invalid" %}</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <div class="mb-3" style="font-size:3rem; color:#CE1126;">
+                    <i class="fas fa-link-slash"></i>
+                </div>
+                <p class="text-muted mb-1">{% trans "This activation link has expired or has already been used." %}</p>
+                <p class="text-muted small">
+                    {% trans "Activation links are valid for 3 days. Please contact your administrator to request a new invitation." %}
+                </p>
+            </div>
+            <div class="card-footer bg-light text-center">
+                <small class="text-muted">
+                    <i class="fas fa-envelope me-1"></i>
+                    {% trans "Ask your administrator to use the 'Resend Invitation' option on your account." %}
+                </small>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- ── Set password form ── -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0 text-center"><i class="fas fa-key me-2"></i>{% trans "Activate Your Account" %}</h5>
+            </div>
+            <div class="card-body p-4">
+
+                <div class="alert alert-success py-2 small mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-id-badge fs-5 text-success"></i>
+                        <div>
+                            <strong>{% trans "System ID:" %} {{ system_id }}</strong><br>
+                            <span class="text-muted">{{ role }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-muted small mb-4">
+                    {% trans "Set a password for your account. You will use this password for all future sign-ins." %}
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="uidb64" value="{{ uidb64 }}">
+                    <input type="hidden" name="token" value="{{ token }}">
+
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold small text-uppercase">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">{{ field.errors|join:" " }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2 small">{{ form.non_field_errors|join:" " }}</div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 mt-2">
+                        <i class="fas fa-check-circle me-2"></i>{% trans "Set Password & Activate Account" %}
+                    </button>
+                </form>
+            </div>
+            <div class="card-footer bg-light text-center">
+                <small class="text-muted">
+                    <i class="fas fa-lock me-1"></i>
+                    {% trans "Password must be at least 10 characters and not commonly used." %}
+                </small>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

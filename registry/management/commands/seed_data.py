@@ -128,7 +128,7 @@ class Command(BaseCommand):
         # 1. Super Admin
         super_admin = User.objects.create_superuser(
             username="superadmin",
-            email="superadmin@clvrs.cm",
+            email="divinegoodnesst@gmail.com",
             password="password123",
             first_name="Global",
             last_name="Administrator",

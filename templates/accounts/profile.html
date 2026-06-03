@@ -5,6 +5,9 @@
 {% block title %}{% trans "My Profile" %} - CLVRS{% endblock %}
 
 {% block content %}
+<div class="mb-3">
+    <a href="{% url 'registry:dashboard' %}" class="btn btn-outline-secondary">&larr; {% trans "Back to Dashboard" %}</a>
+</div>
 <div class="row justify-content-center">
     <div class="col-md-6 mb-4">
         <div class="card shadow-sm border-0 rounded-lg">

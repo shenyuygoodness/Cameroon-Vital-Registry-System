@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load crispy_forms_tags %}
 
 {% block title %}
-    {% if 'birth' in request.path %}Declare Birth - CLVRS{% else %}Declare Death - CLVRS{% endif %}
+    {% if 'birth' in request.path %}{% trans "Declare Birth" %}{% else %}{% trans "Declare Death" %}{% endif %} - CLVRS
 {% endblock %}
 
 {% block content %}
@@ -12,49 +13,45 @@
             <div class="card-header bg-dark text-white py-3">
                 <h4 class="mb-0">
                     {% if 'birth' in request.path %}
-                        Submit Birth Declaration / Déclaration de Naissance
+                        {% trans "Submit Birth Declaration / Déclaration de Naissance" %}
                     {% else %}
-                        Submit Death Declaration / Déclaration de Décès
+                        {% trans "Submit Death Declaration / Déclaration de Décès" %}
                     {% endif %}
                 </h4>
-                <small class="text-muted">Will remain in PENDING status until approved by the Local Council Officer.</small>
+                <small class="text-muted">{% trans "Will remain in PENDING status until approved by the Local Council Officer." %}</small>
             </div>
-            
+
             <div class="card-body p-4">
-                <!-- Informational guides -->
                 {% if 'birth' in request.path %}
                     <div class="alert alert-info py-2 small">
-                        <strong>Guidelines:</strong>
+                        <strong>{% trans "Guidelines:" %}</strong>
                         <ul class="mb-0">
-                            <li>Child name fields are optional. If names are not yet chosen, leave them blank. They can be entered by the council during final registration.</li>
-                            <li>Mother's full name and CNI are mandatory. Father's info is optional.</li>
-                            <li>Under-18 children do not require a National ID.</li>
+                            <li>{% trans "Child name fields are optional. If names are not yet chosen, leave them blank. They can be entered by the council during final registration." %}</li>
+                            <li>{% trans "Mother's full name and CNI are mandatory. Father's info is optional." %}</li>
+                            <li>{% trans "Under-18 children do not require a National ID." %}</li>
                         </ul>
                     </div>
                 {% else %}
                     <div class="alert alert-warning py-2 small">
-                        <strong>Guidelines:</strong>
+                        <strong>{% trans "Guidelines:" %}</strong>
                         <ul class="mb-0">
-                            <li>Verify that the deceased citizen's CNI and name match their official profile.</li>
-                            <li>A death declaration will mark the citizen profile status to 'Deceased' upon approval. This action is irreversible.</li>
+                            <li>{% trans "Verify that the deceased citizen's CNI and name match their official profile." %}</li>
+                            <li>{% trans "A death declaration will mark the citizen profile status to 'Deceased' upon approval. This action is irreversible." %}</li>
                         </ul>
                     </div>
                 {% endif %}
 
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    
                     {{ form|crispy }}
-                    
+
                     {% if form.non_field_errors %}
-                        <div class="alert alert-danger py-2">
-                            {{ form.non_field_errors }}
-                        </div>
+                        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
                     {% endif %}
 
                     <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a href="{% url 'registry:dashboard' %}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-success px-4 py-2">Submit Declaration</button>
+                        <a href="{% url 'registry:dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                        <button type="submit" class="btn btn-success px-4 py-2">{% trans "Submit Declaration" %}</button>
                     </div>
                 </form>
             </div>
