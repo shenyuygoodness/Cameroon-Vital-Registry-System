@@ -1,6 +1,115 @@
-/* Custom CSS overrides for Cameroon Local Vital Registry System */
+/* ── CLVRS Custom Stylesheet ─────────────────────────────────────────────── */
+
+/* Layout */
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: #f6f8fa;
+    color: #2D3748;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-container {
+    flex: 1;
+    padding: 2rem 1rem;
+}
+
+/* ── Cameroon flag top bar ── */
 .flag-bar {
+    height: 5px;
+    display: flex;
+    width: 100%;
     position: sticky;
     top: 0;
     z-index: 1050;
+}
+.flag-green  { background-color: #007A5E; flex: 1; }
+.flag-red    { background-color: #CE1126; flex: 1; }
+.flag-yellow { background-color: #FCD116; flex: 1; }
+
+/* ── Navbar ── */
+.navbar {
+    background-color: #1a202c !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.navbar-brand {
+    font-weight: 700;
+    color: #ffffff !important;
+}
+.navbar-brand span { color: #007A5E; }
+
+.nav-link {
+    color: #a0aec0 !important;
+    font-weight: 500;
+    transition: color 0.2s ease-in-out;
+}
+.nav-link:hover,
+.nav-link.active { color: #ffffff !important; }
+
+/* ── Cards ── */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+}
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #edf2f7;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+    background-color: #007A5E;
+    border-color: #007A5E;
+}
+.btn-primary:hover {
+    background-color: #005F49;
+    border-color: #005F49;
+}
+.btn-secondary {
+    background-color: #E2E8F0;
+    border-color: #E2E8F0;
+    color: #4A5568;
+}
+.btn-secondary:hover {
+    background-color: #CBD5E0;
+    border-color: #CBD5E0;
+    color: #2D3748;
+}
+
+/* ── Footer ── */
+footer {
+    background-color: #1a202c;
+    color: #a0aec0;
+    padding: 1.5rem 0;
+    font-size: 0.9rem;
+    margin-top: auto;
+}
+
+/* ── Dashboard KPI widgets ── */
+.kpi-card {
+    padding: 1.5rem;
+    border-radius: 8px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card-green  { background: linear-gradient(135deg, #007A5E 0%, #009e7a 100%); }
+.kpi-card-red    { background: linear-gradient(135deg, #CE1126 0%, #eb2c43 100%); }
+.kpi-card-yellow { background: linear-gradient(135deg, #D4AF37 0%, #ecc45c 100%); color: #1A202C !important; }
+.kpi-card-blue   { background: linear-gradient(135deg, #2B6CB0 0%, #4299E1 100%); }
+
+.kpi-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+.kpi-title {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
 }
