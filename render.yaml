@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: clvrs-registry
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: gunicorn clvrs_project.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --access-logfile -
+    envVars:
+      # Django core — Render auto-generates SECRET_KEY once and keeps it stable
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
+      # Database — paste the Internal Database URL from your Render PostgreSQL dashboard
+      - key: DATABASE_URL
+        sync: false
+
+      # Encryption — CRITICAL: set this manually, never auto-generate
+      # Use the same key you generated locally; rotating it breaks all encrypted NICs
+      - key: ENCRYPTION_KEY
+        sync: false
+
+      # Cookie / transport security (all True in production with HTTPS)
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+
+      # Trusted proxies — Render terminates SSL at the edge, so leave blank
+      - key: TRUSTED_PROXIES
+        value: ""
+
+      # Redis — leave blank to use in-memory cache; set a Redis URL for multi-worker rate limiting
+      - key: REDIS_URL
+        value: ""
+
+      # Email (SMTP via Gmail)
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+databases:
+  - name: clvrs-db
+    databaseName: clvrs_db
+    user: clvrs_user
+    plan: free

@@ -24,12 +24,17 @@ class SecurityHeadersMiddleware:
             'payment=(), usb=(), interest-cohort=()'
         )
 
-        # Content Security Policy — no unsafe-inline
+        # Content Security Policy
+        # script-src has no unsafe-inline — XSS protection is the priority.
+        # style-src allows unsafe-inline because several templates have legitimate
+        # inline style attributes (e.g. style="text-align:right") that cannot be
+        # removed without a full template rewrite; CSS injection is low-severity.
+        # font-src includes cdn.jsdelivr.net for FontAwesome webfont files.
         response['Content-Security-Policy'] = (
             "default-src 'self'; "
             "script-src 'self' https://cdn.jsdelivr.net; "
-            "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
             "img-src 'self' data:; "
             "connect-src 'self'; "
             "frame-ancestors 'none'; "

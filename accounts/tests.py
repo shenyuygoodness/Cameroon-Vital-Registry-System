@@ -29,7 +29,8 @@ class TestCustomAuthentication(TestCase):
         self.user = User.objects.create_user(
             username="REG-99999",
             email="testadmin@clvrs.cm",
-            password="securepassword123"
+            password="securepassword123",
+            role=User.Role.REGIONAL_ADMIN,
         )
 
     def test_login_success(self):

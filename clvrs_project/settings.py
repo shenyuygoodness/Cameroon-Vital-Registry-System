@@ -11,9 +11,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 import logging.handlers
 from pathlib import Path
 import environ
+from django.core.exceptions import ImproperlyConfigured
+
+_TESTING = 'test' in sys.argv
 
 # Initialize environ — defaults are safe-for-production values
 env = environ.Env(
@@ -35,6 +39,15 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
+# Render sets RENDER_EXTERNAL_HOSTNAME automatically — allow it without manual config
+if _render_host := os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS.append(_render_host)
+
+# CSRF must trust the HTTPS origin that Render terminates SSL on
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+if _render_host:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,11 +55,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',  # must be before staticfiles
     'django.contrib.staticfiles',
     
     # Third party apps
     'crispy_forms',
     'crispy_bootstrap5',
+    'axes',
     
     # Local apps
     'accounts.apps.AccountsConfig',
@@ -61,9 +76,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+
     # Custom Security Headers Middleware
     'registry.middleware.SecurityHeadersMiddleware',
 ]
@@ -137,7 +153,13 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# In production, whitenoise serves pre-compressed, fingerprinted static files.
+# In development, Django's built-in server handles statics directly from STATICFILES_DIRS.
+STATICFILES_STORAGE = (
+    'django.contrib.staticfiles.storage.StaticFilesStorage'
+    if DEBUG else
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
 
 # Media Files - Standard public uploads
 MEDIA_URL = '/media/'
@@ -201,23 +223,48 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
+# ── Authentication backends ──
+# AxesStandaloneBackend must come first so locked accounts are rejected
+# before ModelBackend even checks the password.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# ── django-axes (per-account brute-force lockout) ──
+from datetime import timedelta
+AXES_FAILURE_LIMIT       = 5               # lock after 5 consecutive failures
+AXES_COOLOFF_TIME        = timedelta(minutes=30)  # auto-unlock after 30 min
+AXES_RESET_ON_SUCCESS    = True            # clear failure count on successful login
+AXES_LOCKOUT_PARAMETERS  = ['username', 'ip_address']  # lock per username+IP pair
+AXES_ENABLE_ADMIN        = True            # show locked accounts in Django admin
+AXES_VERBOSE             = False
+
 # ── Trusted reverse-proxy IPs ──
 # Only connections from these IPs are allowed to set X-Forwarded-For.
 # Set to your load-balancer / Nginx IP(s) in production, e.g. "10.0.0.1,10.0.0.2"
 TRUSTED_PROXIES = set(env.list('TRUSTED_PROXIES', default=[]))
 
-# ── Cache (Redis) ──
-# Shared across all Gunicorn workers — required for rate-limiting to work correctly.
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env('REDIS_URL', default='redis://127.0.0.1:6379/1'),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "KEY_PREFIX": "clvrs",
+# ── Cache ──
+# Tests always use LocMemCache (no Redis server required in CI or local dev).
+# In production, Redis is required so rate limits survive across Gunicorn workers.
+# In development (DEBUG=True), falls back to LocMemCache if REDIS_URL is not set.
+_redis_url = env('REDIS_URL', default='')
+if _TESTING:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+elif _redis_url:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": _redis_url,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "KEY_PREFIX": "clvrs",
+        }
     }
-}
+elif DEBUG:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+else:
+    raise ImproperlyConfigured("REDIS_URL must be set in production (DEBUG=False).")
 
 # ── Logging ──
 LOG_DIR = BASE_DIR / 'logs'
@@ -252,7 +299,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
+            'level': 'INFO',
             'propagate': False,
         },
         'registry': {
