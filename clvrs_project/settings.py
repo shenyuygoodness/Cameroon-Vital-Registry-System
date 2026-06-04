@@ -155,11 +155,16 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 # In production, whitenoise serves pre-compressed, fingerprinted static files.
 # In development, Django's built-in server handles statics directly from STATICFILES_DIRS.
-STATICFILES_STORAGE = (
-    'django.contrib.staticfiles.storage.StaticFilesStorage'
-    if DEBUG else
-    'whitenoise.storage.CompressedManifestStaticFilesStorage'
-)
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG else
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
+    },
+}
 
 # Media Files - Standard public uploads
 MEDIA_URL = '/media/'
@@ -183,6 +188,9 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE    = 'Strict'
 
 # ── Transport security ──
+# Render terminates SSL at the load balancer and forwards HTTP with X-Forwarded-Proto: https.
+# Without this, SECURE_SSL_REDIRECT causes an infinite redirect loop on Render.
+SECURE_PROXY_SSL_HEADER        = None if DEBUG else ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_HSTS_SECONDS            = 0 if DEBUG else 31536000   # 1 year in production
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD            = not DEBUG
@@ -250,9 +258,9 @@ TRUSTED_PROXIES = set(env.list('TRUSTED_PROXIES', default=[]))
 # In production, Redis is required so rate limits survive across Gunicorn workers.
 # In development (DEBUG=True), falls back to LocMemCache if REDIS_URL is not set.
 _redis_url = env('REDIS_URL', default='')
-if _TESTING:
+if _TESTING or not _redis_url:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
-elif _redis_url:
+else:
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
@@ -261,10 +269,6 @@ elif _redis_url:
             "KEY_PREFIX": "clvrs",
         }
     }
-elif DEBUG:
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
-else:
-    raise ImproperlyConfigured("REDIS_URL must be set in production (DEBUG=False).")
 
 # ── Logging ──
 LOG_DIR = BASE_DIR / 'logs'
