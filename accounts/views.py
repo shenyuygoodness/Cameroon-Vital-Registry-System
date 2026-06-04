@@ -78,9 +78,10 @@ class DashboardRedirectView(LoginRequiredMixin, View):
     Redirects users to their specific dashboard based on their RBAC role.
     """
     def get(self, request, *args, **kwargs):
-        user = request.user
-        # All role dashboards are rendered by registry views, which inspect the request.user.
-        # So we can redirect them all to the core registry dashboard.
+        if request.user.role == User.Role.CITIZEN:
+            logout(request)
+            messages.info(request, "The citizen portal is not yet available. Please check back later.")
+            return redirect('login')
         return redirect('registry:dashboard')
 
 class UserProfileView(LoginRequiredMixin, TemplateView):

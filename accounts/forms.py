@@ -47,8 +47,15 @@ class CustomAuthenticationForm(AuthenticationForm):
                     "Invalid credentials. Please verify your System ID and Email.",
                     code="invalid_login"
                 )
-            else:
-                self.confirm_login_allowed(self.user_cache)
+
+            if self.user_cache.role == User.Role.CITIZEN:
+                raise forms.ValidationError(
+                    "The citizen portal is not yet available. "
+                    "Please contact your local council office for assistance.",
+                    code="citizen_portal_unavailable"
+                )
+
+            self.confirm_login_allowed(self.user_cache)
         return self.cleaned_data
 
 
