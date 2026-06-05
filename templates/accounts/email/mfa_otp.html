@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your CLVRS Verification Code</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f4f6f8; font-family: Arial, sans-serif; }
+    .wrapper { max-width: 520px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .header { background: #1a1a2e; padding: 24px 32px; text-align: center; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px; }
+    .header small { color: #aaa; font-size: 12px; }
+    .flag-bar { display: flex; height: 6px; }
+    .flag-bar .g { flex: 1; background: #0B6623; }
+    .flag-bar .r { flex: 1; background: #CE1126; }
+    .flag-bar .y { flex: 1; background: #FCD116; }
+    .body { padding: 32px; }
+    .body p { color: #333; font-size: 15px; line-height: 1.6; }
+    .otp-box { margin: 24px 0; text-align: center; background: #f0f4ff; border: 2px dashed #3a5bd9; border-radius: 8px; padding: 20px; }
+    .otp-code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1a1a2e; font-family: 'Courier New', monospace; }
+    .expiry { color: #888; font-size: 13px; margin-top: 8px; }
+    .warning { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; border-radius: 4px; margin-top: 20px; font-size: 13px; color: #555; }
+    .footer { background: #f4f6f8; text-align: center; padding: 16px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="flag-bar">
+      <div class="g"></div><div class="r"></div><div class="y"></div>
+    </div>
+    <div class="header">
+      <h1>CLVRS — Verification Code</h1>
+      <small>Cameroon Local Vital Registry System</small>
+    </div>
+    <div class="body">
+      <p>Hello, <strong>{{ user.get_full_name|default:user.username }}</strong>,</p>
+      <p>A login attempt was made on your account. Enter the code below to complete your sign-in.</p>
+
+      <div class="otp-box">
+        <div class="otp-code">{{ otp }}</div>
+        <div class="expiry">Expires in {{ expiry_minutes }} minutes</div>
+      </div>
+
+      <div class="warning">
+        <strong>Security notice:</strong> If you did not attempt to log in, please ignore this email.
+        Your account remains secure. Do <strong>not</strong> share this code with anyone.
+      </div>
+
+      <p style="margin-top: 24px; color: #888; font-size: 13px;">
+        This is an automated message from the CLVRS system. Do not reply to this email.
+      </p>
+    </div>
+    <div class="footer">
+      &copy; 2026 Cameroon Local Vital Registry System &mdash; Ministry of Decentralization and Local Development
+    </div>
+  </div>
+</body>
+</html>

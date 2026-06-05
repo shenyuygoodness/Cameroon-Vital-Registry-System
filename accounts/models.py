@@ -1,7 +1,10 @@
 import string
+import hashlib
 import secrets
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 class User(AbstractUser):
@@ -108,3 +111,52 @@ class User(AbstractUser):
             new_id = f"{prefix}-{chars}"
             if not cls.objects.filter(username=new_id).exists():
                 return new_id
+
+
+class MFAToken(models.Model):
+    """
+    Stores a single-use, time-limited OTP for email-based MFA.
+    The raw code is never persisted — only its SHA-256 hash is stored.
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='mfa_tokens',
+    )
+    code_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @classmethod
+    def generate_for_user(cls, user):
+        """
+        Invalidates any outstanding tokens for the user, generates a fresh
+        9-digit OTP, persists its hash, and returns (raw_otp, token).
+        """
+        from django.conf import settings as django_settings
+        cls.objects.filter(user=user, is_used=False).update(is_used=True)
+
+        raw_otp = ''.join(str(secrets.randbelow(10)) for _ in range(9))
+        expiry = getattr(django_settings, 'MFA_OTP_EXPIRY_SECONDS', 600)
+
+        token = cls.objects.create(
+            user=user,
+            code_hash=hashlib.sha256(raw_otp.encode()).hexdigest(),
+            expires_at=timezone.now() + timedelta(seconds=expiry),
+        )
+        return raw_otp, token
+
+    def verify(self, code: str) -> bool:
+        """Return True and mark used if code matches and has not expired."""
+        if self.is_used or timezone.now() > self.expires_at:
+            return False
+        candidate = hashlib.sha256(code.encode()).hexdigest()
+        if secrets.compare_digest(self.code_hash, candidate):
+            self.is_used = True
+            self.save(update_fields=['is_used'])
+            return True
+        return False

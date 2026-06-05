@@ -6,14 +6,16 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.views.generic import View, TemplateView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from django.conf import settings
-from accounts.forms import CustomAuthenticationForm
-from accounts.models import User
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from accounts.forms import CustomAuthenticationForm, MFAVerificationForm
+from accounts.models import User, MFAToken
 
 
 def _get_client_ip(request):
@@ -31,6 +33,39 @@ def _get_client_ip(request):
             return forwarded_for.split(',')[0].strip()
     return remote_addr
 
+
+def _send_mfa_email(user, otp):
+    """Send OTP to the user's registered email address."""
+    subject = "Your CLVRS Login Verification Code"
+    html_body = render_to_string('accounts/email/mfa_otp.html', {
+        'user': user,
+        'otp': otp,
+        'expiry_minutes': getattr(settings, 'MFA_OTP_EXPIRY_SECONDS', 600) // 60,
+    })
+    send_mail(
+        subject=subject,
+        message=f"Your CLVRS verification code is: {otp}\nIt expires in "
+                f"{getattr(settings, 'MFA_OTP_EXPIRY_SECONDS', 600) // 60} minutes.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        html_message=html_body,
+        fail_silently=False,
+    )
+
+
+def _initiate_mfa(request, user):
+    """
+    Generate an OTP, store the pending user ID in the session (the user is NOT
+    yet authenticated at this point), email the code, and redirect to the
+    verification page.
+    """
+    otp, _token = MFAToken.generate_for_user(user)
+    request.session['mfa_pending_user_id'] = user.pk
+    request.session['mfa_pending_backend'] = 'django.contrib.auth.backends.ModelBackend'
+    _send_mfa_email(user, otp)
+    return redirect(reverse('mfa_verify'))
+
+
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class CustomLoginView(LoginView):
     authentication_form = CustomAuthenticationForm
@@ -38,16 +73,8 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def form_valid(self, form):
-        from registry.models import AuditLog
-        AuditLog.objects.create(
-            user=form.get_user(),
-            action=AuditLog.Action.LOGIN,
-            model_name='User',
-            record_id=str(form.get_user().pk),
-            details=f"Successful login for {form.get_user().username}.",
-            ip_address=_get_client_ip(self.request),
-        )
-        return super().form_valid(form)
+        """Credentials are valid — begin MFA instead of completing login."""
+        return _initiate_mfa(self.request, form.get_user())
 
 
 class CustomLogoutView(View):
@@ -73,10 +100,110 @@ class CustomLogoutView(View):
         return redirect('login')
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
+class MFAVerifyView(View):
+    template_name = 'accounts/mfa_verify.html'
+
+    def _get_pending_user(self, request):
+        user_id = request.session.get('mfa_pending_user_id')
+        if not user_id:
+            return None
+        try:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('registry:dashboard')
+        if not request.session.get('mfa_pending_user_id'):
+            return redirect('login')
+        return render(request, self.template_name, {'form': MFAVerificationForm()})
+
+    def post(self, request, *args, **kwargs):
+        from registry.models import AuditLog
+        if request.user.is_authenticated:
+            return redirect('registry:dashboard')
+
+        user = self._get_pending_user(request)
+        if not user:
+            messages.error(request, "Session expired. Please log in again.")
+            return redirect('login')
+
+        form = MFAVerificationForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {'form': form})
+
+        code = form.cleaned_data['code']
+        token = (
+            MFAToken.objects
+            .filter(user=user, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+
+        if token and token.verify(code):
+            # Clear MFA session keys before completing login
+            request.session.pop('mfa_pending_user_id', None)
+            request.session.pop('mfa_pending_backend', None)
+
+            backend = 'django.contrib.auth.backends.ModelBackend'
+            auth_login(request, user, backend=backend)
+
+            AuditLog.objects.create(
+                user=user,
+                action=AuditLog.Action.LOGIN,
+                model_name='User',
+                record_id=str(user.pk),
+                details=f"Successful login with MFA for {user.username}.",
+                ip_address=_get_client_ip(request),
+            )
+            AuditLog.objects.create(
+                user=user,
+                action=AuditLog.Action.MFA_VERIFY,
+                model_name='User',
+                record_id=str(user.pk),
+                details=f"MFA code verified for {user.username}.",
+                ip_address=_get_client_ip(request),
+            )
+            return redirect('registry:dashboard')
+
+        # OTP wrong or expired
+        AuditLog.objects.create(
+            user=user,
+            action=AuditLog.Action.MFA_FAILED,
+            model_name='User',
+            record_id=str(user.pk),
+            details=f"Failed MFA attempt for {user.username}.",
+            ip_address=_get_client_ip(request),
+        )
+        form.add_error('code', "Invalid or expired verification code. Please try again or request a new code.")
+        return render(request, self.template_name, {'form': form})
+
+
+@method_decorator(ratelimit(key='ip', rate='3/m', method='POST', block=True), name='dispatch')
+class MFAResendView(View):
+    """Resend a fresh OTP to the user who is mid-login."""
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.session.get('mfa_pending_user_id')
+        if not user_id:
+            messages.error(request, "Session expired. Please log in again.")
+            return redirect('login')
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            messages.error(request, "Session expired. Please log in again.")
+            return redirect('login')
+
+        otp, _token = MFAToken.generate_for_user(user)
+        _send_mfa_email(user, otp)
+        messages.success(request, "A new verification code has been sent to your email.")
+        return redirect(reverse('mfa_verify'))
+
+
 class DashboardRedirectView(LoginRequiredMixin, View):
-    """
-    Redirects users to their specific dashboard based on their RBAC role.
-    """
+    """Redirects users to their specific dashboard based on their RBAC role."""
     def get(self, request, *args, **kwargs):
         if request.user.role == User.Role.CITIZEN:
             logout(request)
@@ -84,8 +211,10 @@ class DashboardRedirectView(LoginRequiredMixin, View):
             return redirect('login')
         return redirect('registry:dashboard')
 
+
 class UserProfileView(LoginRequiredMixin, TemplateView):
     template_name = 'accounts/profile.html'
+
 
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class LandingPageView(View):
@@ -99,10 +228,9 @@ class LandingPageView(View):
             return redirect('registry:dashboard')
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            from django.contrib.auth import login as auth_login
-            auth_login(request, form.get_user())
-            return redirect('registry:dashboard')
+            return _initiate_mfa(request, form.get_user())
         return render(request, 'landing.html', {'form': form})
+
 
 class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     template_name = 'accounts/password_change.html'

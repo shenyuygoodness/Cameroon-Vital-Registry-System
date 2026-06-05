@@ -1,14 +1,17 @@
+import os
+import re
+import base64
 import hashlib
 import hmac
 import datetime
 import logging
 from io import BytesIO
 import pandas as pd
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import transaction
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -21,28 +24,54 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
 # -------------------------------------------------------------
-# 1. Encryption Service
+# 1. Encryption Service  (AES-256-GCM; v1 Fernet legacy read)
 # -------------------------------------------------------------
+_AES_VERSION_PREFIX = 'v2:'
+
 class EncryptionService:
+    """
+    Encrypts with AES-256-GCM (NIST SP 800-38D).
+    Transparently decrypts legacy Fernet (AES-128-CBC) ciphertext so that
+    existing database rows keep working until re-encrypted via
+    `python manage.py reencrypt_data`.
+
+    Key derivation: ENCRYPTION_KEY must be a URL-safe base64 value that
+    decodes to ≥ 32 bytes.  A Fernet key (44 chars) satisfies this exactly —
+    the same env variable works without any .env changes.
+    """
+
     @staticmethod
-    def get_fernet():
-        key = getattr(settings, 'ENCRYPTION_KEY', None)
-        if not key:
+    def _get_aes256_key() -> bytes:
+        raw = getattr(settings, 'ENCRYPTION_KEY', None)
+        if not raw:
             raise ImproperlyConfigured(
-                "ENCRYPTION_KEY is not set. Generate one with: "
-                "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                "ENCRYPTION_KEY is not set. Generate one with:\n"
+                "python -c \"import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())\""
             )
-        if isinstance(key, str):
-            key = key.encode()
-        return Fernet(key)
+        if isinstance(raw, str):
+            raw = raw.encode()
+        try:
+            key_bytes = base64.urlsafe_b64decode(raw + b'==')
+        except Exception:
+            raise ImproperlyConfigured("ENCRYPTION_KEY must be URL-safe base64 encoded.")
+        if len(key_bytes) < 32:
+            raise ImproperlyConfigured(
+                "ENCRYPTION_KEY must decode to at least 32 bytes for AES-256. "
+                "Regenerate with: python -c \"import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())\""
+            )
+        return key_bytes[:32]
 
     @classmethod
     def encrypt(cls, text: str) -> str:
         if not text:
             return None
         try:
-            f = cls.get_fernet()
-            return f.encrypt(text.strip().encode()).decode()
+            key = cls._get_aes256_key()
+            aesgcm = AESGCM(key)
+            nonce = os.urandom(12)           # 96-bit nonce — unique per operation
+            ciphertext = aesgcm.encrypt(nonce, text.strip().encode('utf-8'), None)
+            payload = base64.urlsafe_b64encode(nonce + ciphertext).decode('ascii')
+            return _AES_VERSION_PREFIX + payload
         except Exception as e:
             logger.critical("ENCRYPTION FAILURE — data could not be encrypted: %s", e)
             raise RuntimeError("Encryption failed. Check ENCRYPTION_KEY configuration.") from e
@@ -52,8 +81,18 @@ class EncryptionService:
         if not encrypted_text:
             return None
         try:
-            f = cls.get_fernet()
-            return f.decrypt(encrypted_text.encode()).decode()
+            if encrypted_text.startswith(_AES_VERSION_PREFIX):
+                # New AES-256-GCM path
+                payload = base64.urlsafe_b64decode(
+                    encrypted_text[len(_AES_VERSION_PREFIX):]
+                )
+                nonce, ciphertext = payload[:12], payload[12:]
+                key = cls._get_aes256_key()
+                return AESGCM(key).decrypt(nonce, ciphertext, None).decode('utf-8')
+            else:
+                # Legacy Fernet (AES-128-CBC-HMAC) path — read-only until re-encrypted
+                raw = getattr(settings, 'ENCRYPTION_KEY', '').encode()
+                return Fernet(raw).decrypt(encrypted_text.encode()).decode()
         except InvalidToken:
             logger.critical(
                 "DECRYPTION FAILURE — InvalidToken. The ENCRYPTION_KEY may have "
@@ -78,6 +117,26 @@ def get_hash(text: str) -> str:
     if isinstance(key, str):
         key = key.encode()
     return hmac.new(key, text.strip().upper().encode(), hashlib.sha256).hexdigest()
+
+
+# Matches alphanumeric strings of 9–20 chars that look like NIDs.
+# Used as a last-resort scrubber — callers should never pass raw NIDs to
+# AuditLog in the first place.
+_NID_PATTERN = re.compile(r'\b[A-Z0-9]{9,20}\b')
+
+def sanitize_audit_details(text: str) -> str:
+    """Strip NID-shaped tokens from audit log detail strings before writing."""
+    if not text:
+        return text
+    return _NID_PATTERN.sub('[REDACTED]', text)
+
+
+def mask_nid(nid: str) -> str:
+    """Return a NID with all but the last 4 digits replaced by asterisks."""
+    if not nid:
+        return 'N/A'
+    visible = min(4, len(nid))
+    return '*' * (len(nid) - visible) + nid[-visible:]
 
 
 # -------------------------------------------------------------
@@ -410,9 +469,9 @@ def generate_birth_certificate_pdf(declaration):
         [Paragraph("Gender / Sexe:", label_style), Paragraph(gender_label, body_style)],
         [Paragraph("Place of Birth / Lieu de Naissance:", label_style), Paragraph(declaration.place_of_birth, body_style)],
         [Paragraph("Father's Name / Nom du Père:", label_style), Paragraph(declaration.father_name or "N/A", body_style)],
-        [Paragraph("Father's NIC / CNI du Père:", label_style), Paragraph(declaration.father_national_id or "N/A", body_style)],
+        [Paragraph("Father's NIC / CNI du Père:", label_style), Paragraph(mask_nid(declaration.father_national_id), body_style)],
         [Paragraph("Mother's Name / Nom de la Mère:", label_style), Paragraph(declaration.mother_name, body_style)],
-        [Paragraph("Mother's NIC / CNI de la Mère:", label_style), Paragraph(declaration.mother_national_id, body_style)],
+        [Paragraph("Mother's NIC / CNI de la Mère:", label_style), Paragraph(mask_nid(declaration.mother_national_id), body_style)],
         [Paragraph("Date of Approval / Date de Validation:", label_style), Paragraph(declaration.confirmed_at.strftime('%B %d, %Y') if declaration.confirmed_at else 'N/A', body_style)],
         [Paragraph("Reviewing Officer / Officier Civil:", label_style), Paragraph(declaration.reviewed_by.get_full_name() if declaration.reviewed_by else 'N/A', body_style)],
     ]
@@ -551,7 +610,7 @@ def generate_death_certificate_pdf(declaration):
     # 3. Details
     deceased = declaration.citizen
     gender_label = "Male / Masculin" if deceased.gender == 'M' else "Female / Féminin"
-    nic_label = deceased.national_id if deceased.national_id else "Under-18 / Pas de CNI"
+    nic_label = mask_nid(deceased.national_id) if deceased.national_id else "Under-18 / Pas de CNI"
     
     details_data = [
         [Paragraph("Registration No. / N° Acte:", label_style), Paragraph(declaration.declaration_number, body_style)],

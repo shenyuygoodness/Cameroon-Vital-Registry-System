@@ -289,9 +289,11 @@ class AuditLog(models.Model):
         REJECT  = 'REJECT',  'Reject'
         IMPORT  = 'IMPORT',  'Import'
         EXPORT  = 'EXPORT',  'Export'
-        LOGIN   = 'LOGIN',   'Login'
-        LOGOUT  = 'LOGOUT',  'Logout'
-        LOCKOUT = 'LOCKOUT', 'Account Locked'
+        LOGIN      = 'LOGIN',      'Login'
+        LOGOUT     = 'LOGOUT',     'Logout'
+        LOCKOUT    = 'LOCKOUT',    'Account Locked'
+        MFA_VERIFY = 'MFA_VERIFY', 'MFA Verified'
+        MFA_FAILED = 'MFA_FAILED', 'MFA Failed'
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     action = models.CharField(max_length=20, choices=Action.choices)

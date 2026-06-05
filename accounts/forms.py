@@ -25,6 +25,8 @@ class CustomAuthenticationForm(AuthenticationForm):
         password = self.cleaned_data.get("password")
 
         if username and email and password:
+            # Normalize before lookup to prevent bypass via leading/trailing whitespace
+            email = email.strip().lower()
             try:
                 user = User.objects.get(username=username, email__iexact=email)
             except User.DoesNotExist:
@@ -73,3 +75,25 @@ class CustomUserCreationForm(UserCreationForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
+
+
+class MFAVerificationForm(forms.Form):
+    code = forms.CharField(
+        label="Verification Code",
+        min_length=9,
+        max_length=9,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-lg text-center',
+            'placeholder': '— — — — — — — — —',
+            'autocomplete': 'one-time-code',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{9}',
+            'id': 'id_code',
+        }),
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').strip()
+        if not code.isdigit():
+            raise forms.ValidationError("Verification code must contain digits only.")
+        return code

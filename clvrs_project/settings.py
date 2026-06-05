@@ -119,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
-            'min_length': 10,  # Enforce stronger passwords
+            'min_length': 12,
         }
     },
     {
@@ -184,7 +184,7 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY    = True
 SESSION_COOKIE_AGE      = 1800   # 30-minute idle timeout
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_SAMESITE    = 'Strict'
 
 # ── Transport security ──
@@ -206,8 +206,11 @@ SECURE_REFERRER_POLICY   = 'strict-origin-when-cross-origin'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB maximum request body
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB maximum single file
 
-# ── Activation token expiry (24 hours) ──
-PASSWORD_RESET_TIMEOUT = 86400
+# ── Activation token expiry (12 hours) ──
+PASSWORD_RESET_TIMEOUT = 43200
+
+# ── MFA OTP expiry (10 minutes) ──
+MFA_OTP_EXPIRY_SECONDS = 600
 
 # Crispy Forms Config
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'

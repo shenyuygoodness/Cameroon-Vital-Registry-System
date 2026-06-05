@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Two-Factor Verification" %} - CLVRS{% endblock %}
+
+{% block extra_css %}
+<style>
+  #id_code {
+    font-size: 2rem;
+    letter-spacing: .4rem;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+  }
+  /* Auto-focus animation */
+  #id_code:focus { box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .35); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+  <div class="col-md-5">
+    <div class="card shadow-lg">
+
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h4 class="mb-0">
+          <i class="fas fa-shield-alt me-2"></i>{% trans "Two-Factor Verification" %}
+        </h4>
+        <small class="text-muted">{% trans "Cameroon Local Vital Registry System" %}</small>
+      </div>
+
+      <div class="card-body p-4">
+        <p class="text-muted text-center mb-4">
+          {% blocktrans %}
+            A 9-digit verification code has been sent to your registered email address.
+            Enter it below to complete your sign-in.
+          {% endblocktrans %}
+        </p>
+
+        <form method="post" autocomplete="off" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-4">
+            <label for="id_code" class="form-label fw-bold">{% trans "Verification Code" %}</label>
+            {{ form.code }}
+            {% if form.code.errors %}
+              <div class="text-danger small mt-1">{{ form.code.errors }}</div>
+            {% endif %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary w-100 py-2">
+            <i class="fas fa-check-circle me-1"></i>{% trans "Verify & Sign In" %}
+          </button>
+        </form>
+
+        <hr class="my-3">
+
+        <div class="text-center">
+          <p class="text-muted small mb-2">{% trans "Didn't receive the code?" %}</p>
+          <form method="post" action="{% url 'mfa_resend' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+              <i class="fas fa-redo me-1"></i>{% trans "Resend Code" %}
+            </button>
+          </form>
+        </div>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'login' %}" class="text-muted small text-decoration-none">
+            <i class="fas fa-arrow-left me-1"></i>{% trans "Back to Login" %}
+          </a>
+        </div>
+      </div>
+
+      <div class="card-footer text-center bg-light">
+        <small class="text-muted">
+          <i class="fas fa-clock me-1"></i>
+          {% trans "Codes expire after 10 minutes. Do not share this code with anyone." %}
+        </small>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Auto-focus and enforce digit-only input
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('id_code');
+    if (input) {
+      input.focus();
+      input.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 9);
+      });
+    }
+  });
+</script>
+{% endblock %}

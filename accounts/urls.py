@@ -2,12 +2,15 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from accounts.views import (
     CustomLoginView, CustomLogoutView, DashboardRedirectView,
-    UserProfileView, CustomPasswordChangeView, ActivateAccountView
+    UserProfileView, CustomPasswordChangeView, ActivateAccountView,
+    MFAVerifyView, MFAResendView,
 )
 
 urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
+    path('mfa/verify/', MFAVerifyView.as_view(), name='mfa_verify'),
+    path('mfa/resend/', MFAResendView.as_view(), name='mfa_resend'),
     path('dashboard/', DashboardRedirectView.as_view(), name='dashboard_redirect'),
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('profile/password/', CustomPasswordChangeView.as_view(), name='password_change'),
