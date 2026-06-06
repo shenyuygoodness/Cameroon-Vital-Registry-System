@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import redirect, render
 from django.contrib.auth import logout, login as auth_login
 from django.contrib.auth.views import LoginView, PasswordChangeView
@@ -16,6 +18,8 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from accounts.forms import CustomAuthenticationForm, MFAVerificationForm
 from accounts.models import User, MFAToken
+
+logger = logging.getLogger('accounts')
 
 
 def _get_client_ip(request):
@@ -56,13 +60,36 @@ def _send_mfa_email(user, otp):
 def _initiate_mfa(request, user):
     """
     Generate an OTP, store the pending user ID in the session (the user is NOT
-    yet authenticated at this point), email the code, and redirect to the
-    verification page.
+    yet authenticated at this point), attempt to email the code, and redirect
+    to the verification page.  The redirect happens regardless of whether the
+    email succeeds — if it failed the user can hit 'Resend Code' on the next page.
     """
     otp, _token = MFAToken.generate_for_user(user)
     request.session['mfa_pending_user_id'] = user.pk
     request.session['mfa_pending_backend'] = 'django.contrib.auth.backends.ModelBackend'
-    _send_mfa_email(user, otp)
+
+    if not user.email:
+        logger.error("MFA email skipped — user pk=%s has no email address.", user.pk)
+        messages.warning(
+            request,
+            "Your account has no email address on file. "
+            "Please contact an administrator to complete login.",
+        )
+    else:
+        try:
+            _send_mfa_email(user, otp)
+        except Exception:
+            logger.exception(
+                "MFA email delivery failed for user pk=%s (address: %s).",
+                user.pk, user.email,
+            )
+            messages.warning(
+                request,
+                "We could not deliver the verification code right now. "
+                "Please use the 'Resend Code' button on the next page, "
+                "or contact an administrator if the problem persists.",
+            )
+
     return redirect(reverse('mfa_verify'))
 
 
