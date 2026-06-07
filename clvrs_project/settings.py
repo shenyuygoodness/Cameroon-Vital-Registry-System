@@ -47,6 +47,9 @@ if _render_host := os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
 if _railway_host := os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
     ALLOWED_HOSTS.append(_railway_host)
 
+# Railway healthcheck probe sends Host: healthcheck.railway.app
+ALLOWED_HOSTS.append('healthcheck.railway.app')
+
 # CSRF must trust the HTTPS origin that the platform terminates SSL on
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 if _render_host:
