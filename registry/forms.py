@@ -191,98 +191,242 @@ class DeathDeclarationForm(forms.ModelForm):
         return cleaned_data
 
 from accounts.models import User
+from registry.models import Region, Division, Subdivision
+
+
+def _clean_email_unique(email):
+    """Shared email uniqueness check for all user creation forms."""
+    if email:
+        email = email.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email address already exists.")
+    return email
+
+
+def _get_or_create_division_subdivision(region, division_name, subdivision_name):
+    """
+    Look up or create a Division (case-insensitive) inside the given Region,
+    then look up or create a Subdivision inside that Division.
+    Returns (division, subdivision).
+    """
+    division_name = division_name.strip()
+    subdivision_name = subdivision_name.strip()
+
+    try:
+        division = Division.objects.get(name__iexact=division_name, region=region)
+    except Division.DoesNotExist:
+        division = Division.objects.create(name=division_name, region=region)
+
+    try:
+        subdivision = Subdivision.objects.get(name__iexact=subdivision_name, division=division)
+    except Subdivision.DoesNotExist:
+        subdivision = Subdivision.objects.create(name=subdivision_name, division=division)
+
+    return division, subdivision
+
 
 class RegionalAdminCreationForm(forms.ModelForm):
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-    
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'region', 'email']
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'region': forms.Select(attrs={'class': 'form-select', 'required': True}),
-        }
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if email:
-            email = email.strip()
-            if User.objects.filter(email__iexact=email).exists():
-                raise forms.ValidationError("An account with this email address already exists.")
-        return email
-
-class CouncilOfficerCreationForm(forms.ModelForm):
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'division', 'subdivision', 'email']
-        widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'division': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'subdivision': forms.Select(attrs={'class': 'form-select', 'required': True}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'region': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if user and user.is_regional_admin and user.region:
-            self.fields['division'].queryset = self.fields['division'].queryset.filter(region=user.region)
-            self.fields['subdivision'].queryset = self.fields['subdivision'].queryset.filter(division__region=user.region)
+        # Only show the 10 Cameroon regions, ordered alphabetically
+        self.fields['region'].queryset = Region.objects.all().order_by('name')
+        self.fields['region'].empty_label = "— Select Region —"
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if email:
-            email = email.strip()
-            if User.objects.filter(email__iexact=email).exists():
-                raise forms.ValidationError("An account with this email address already exists.")
-        return email
+        return _clean_email_unique(self.cleaned_data.get('email'))
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        if instance.division:
-            instance.region = instance.division.region
-        if commit:
-            instance.save()
-        return instance
 
-class HospitalStaffCreationForm(forms.ModelForm):
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
-
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'division', 'subdivision', 'hospital_name', 'hospital_type', 'dr_incharge', 'email']
-        widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'division': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'subdivision': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'hospital_name': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-            'hospital_type': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'dr_incharge': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
-        }
+class CouncilOfficerCreationForm(forms.Form):
+    """
+    Division and subdivision are free-text: if the named record does not exist
+    it is created automatically. Super admins must also pick the region; regional
+    admins have theirs applied from their own profile.
+    """
+    first_name = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    last_name = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+    region = forms.ModelChoiceField(
+        queryset=Region.objects.all().order_by('name'),
+        required=False,
+        empty_label="— Select Region —",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Region",
+    )
+    division_name = forms.CharField(
+        max_length=100, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Mfoundi',
+        }),
+        label="Division",
+    )
+    subdivision_name = forms.CharField(
+        max_length=100, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Yaoundé I (Council name)',
+        }),
+        label="Subdivision (Council)",
+    )
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
+        self._creating_user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if user and user.is_regional_admin and user.region:
-            self.fields['division'].queryset = self.fields['division'].queryset.filter(region=user.region)
-            self.fields['subdivision'].queryset = self.fields['subdivision'].queryset.filter(division__region=user.region)
+        if self._creating_user and self._creating_user.is_regional_admin:
+            # Regional admin's region is fixed — hide the picker
+            del self.fields['region']
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if email:
-            email = email.strip()
-            if User.objects.filter(email__iexact=email).exists():
-                raise forms.ValidationError("An account with this email address already exists.")
-        return email
+        return _clean_email_unique(self.cleaned_data.get('email'))
 
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        if instance.division:
-            instance.region = instance.division.region
-        if commit:
-            instance.save()
-        return instance
+    def clean(self):
+        cleaned = super().clean()
+        # Super admin must select a region
+        if not (self._creating_user and self._creating_user.is_regional_admin):
+            if not cleaned.get('region'):
+                self.add_error('region', "Please select a region.")
+        return cleaned
+
+    def save(self):
+        data = self.cleaned_data
+        region = (
+            self._creating_user.region
+            if self._creating_user and self._creating_user.is_regional_admin
+            else data['region']
+        )
+        division, subdivision = _get_or_create_division_subdivision(
+            region, data['division_name'], data['subdivision_name']
+        )
+        user = User(
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            email=data['email'],
+            region=region,
+            division=division,
+            subdivision=subdivision,
+        )
+        return user
+
+
+class HospitalStaffCreationForm(forms.Form):
+    """
+    Division and subdivision are free-text: if the named record does not exist
+    it is created automatically.
+    """
+    first_name = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    last_name = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+    region = forms.ModelChoiceField(
+        queryset=Region.objects.all().order_by('name'),
+        required=False,
+        empty_label="— Select Region —",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Region",
+    )
+    division_name = forms.CharField(
+        max_length=100, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Wouri',
+        }),
+        label="Division",
+    )
+    subdivision_name = forms.CharField(
+        max_length=100, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Douala I',
+        }),
+        label="Subdivision (Council)",
+    )
+    hospital_name = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Yaoundé General Hospital',
+        }),
+    )
+    hospital_type = forms.ChoiceField(
+        choices=[('', '— Select Type —'), ('Government', 'Government'), ('Private', 'Private')],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    dr_incharge = forms.CharField(
+        max_length=150, required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g. Dr. Marie Ngo',
+        }),
+        label="Doctor In Charge",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self._creating_user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self._creating_user and self._creating_user.is_regional_admin:
+            del self.fields['region']
+
+    def clean_email(self):
+        return _clean_email_unique(self.cleaned_data.get('email'))
+
+    def clean(self):
+        cleaned = super().clean()
+        if not (self._creating_user and self._creating_user.is_regional_admin):
+            if not cleaned.get('region'):
+                self.add_error('region', "Please select a region.")
+        return cleaned
+
+    def save(self):
+        data = self.cleaned_data
+        region = (
+            self._creating_user.region
+            if self._creating_user and self._creating_user.is_regional_admin
+            else data['region']
+        )
+        division, subdivision = _get_or_create_division_subdivision(
+            region, data['division_name'], data['subdivision_name']
+        )
+        user = User(
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            email=data['email'],
+            region=region,
+            division=division,
+            subdivision=subdivision,
+            hospital_name=data['hospital_name'],
+            hospital_type=data['hospital_type'],
+            dr_incharge=data['dr_incharge'],
+        )
+        return user

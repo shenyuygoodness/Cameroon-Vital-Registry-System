@@ -806,7 +806,7 @@ class UserManagementDashboardView(RegionalAdminRequiredMixin, TemplateView):
         elif action == 'create_council_officer' and (user.is_super_admin or user.is_regional_admin):
             form = CouncilOfficerCreationForm(request.POST, user=user)
             if form.is_valid():
-                new_user = form.save(commit=False)
+                new_user = form.save()
                 new_user.role = User.Role.COUNCIL_OFFICER
                 new_user.username = User.generate_id('COU')
                 new_user.set_unusable_password()
@@ -823,7 +823,7 @@ class UserManagementDashboardView(RegionalAdminRequiredMixin, TemplateView):
         elif action == 'create_hospital_staff' and (user.is_super_admin or user.is_regional_admin):
             form = HospitalStaffCreationForm(request.POST, user=user)
             if form.is_valid():
-                new_user = form.save(commit=False)
+                new_user = form.save()
                 new_user.role = User.Role.HOSPITAL_STAFF
                 new_user.username = User.generate_id('HOS')
                 new_user.set_unusable_password()
