@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'axes',
+    'anymail',
     
     # Local apps
     'accounts.apps.AccountsConfig',
@@ -233,25 +234,24 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 # Encryption Configuration
 ENCRYPTION_KEY = env('ENCRYPTION_KEY')
 
-# Email Configuration
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = env.int('EMAIL_PORT', default=465)
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
-EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=EMAIL_PORT != 587)
-# Django raises ValueError if both are True (they are mutually exclusive).
-# If an old EMAIL_USE_TLS=True env var was left in place alongside SSL, resolve it:
-# port 465 uses SSL; port 587 uses STARTTLS.
-if EMAIL_USE_SSL and EMAIL_USE_TLS:
-    EMAIL_USE_TLS = False
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+# ── Email ──
+# In production (Render/Railway) SMTP ports are blocked at the kernel level.
+# Set BREVO_API_KEY in the hosting dashboard to route via Brevo's HTTPS API.
+# Locally (no BREVO_API_KEY), falls back to direct SMTP for dev convenience.
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CLVRS Registry <noreply@clvrs.cm>')
-# Hard limit on SMTP connection time. Without this, a blocked/unreachable SMTP
-# server hangs the request until gunicorn kills the worker (120 s → 500 error).
-# With a short timeout the socket raises an exception our try/except can catch,
-# and the user is redirected to /mfa/verify/ with a "Resend Code" warning.
-EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=10)
+_brevo_api_key = env('BREVO_API_KEY', default='')
+if _brevo_api_key:
+    EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend'
+    ANYMAIL = {'BREVO_API_KEY': _brevo_api_key}
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+    EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
+    EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+    EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=30)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
