@@ -238,7 +238,12 @@ EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.Ema
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=465)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
-EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=True)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=EMAIL_PORT != 587)
+# Django raises ValueError if both are True (they are mutually exclusive).
+# If an old EMAIL_USE_TLS=True env var was left in place alongside SSL, resolve it:
+# port 465 uses SSL; port 587 uses STARTTLS.
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    EMAIL_USE_TLS = False
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CLVRS Registry <noreply@clvrs.cm>')
