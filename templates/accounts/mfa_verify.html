@@ -87,17 +87,7 @@
 </div>
 {% endblock %}
 
+{% load static %}
 {% block extra_js %}
-<script>
-  // Auto-focus and enforce digit-only input
-  document.addEventListener('DOMContentLoaded', function () {
-    const input = document.getElementById('id_code');
-    if (input) {
-      input.focus();
-      input.addEventListener('input', function () {
-        this.value = this.value.replace(/\D/g, '').slice(0, 9);
-      });
-    }
-  });
-</script>
+<script src="{% static 'js/mfa_verify.js' %}"></script>
 {% endblock %}
