@@ -43,10 +43,16 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 if _render_host := os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
     ALLOWED_HOSTS.append(_render_host)
 
-# CSRF must trust the HTTPS origin that Render terminates SSL on
+# Railway sets RAILWAY_PUBLIC_DOMAIN automatically
+if _railway_host := os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
+    ALLOWED_HOSTS.append(_railway_host)
+
+# CSRF must trust the HTTPS origin that the platform terminates SSL on
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 if _render_host:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+if _railway_host:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_host}')
 
 # Application definition
 INSTALLED_APPS = [
