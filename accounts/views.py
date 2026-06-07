@@ -224,8 +224,19 @@ class MFAResendView(View):
             return redirect('login')
 
         otp, _token = MFAToken.generate_for_user(user)
-        _send_mfa_email(user, otp)
-        messages.success(request, "A new verification code has been sent to your email.")
+        try:
+            _send_mfa_email(user, otp)
+            messages.success(request, "A new verification code has been sent to your email.")
+        except Exception:
+            logger.exception(
+                "MFA resend email failed for user pk=%s (address: %s).",
+                user.pk, user.email,
+            )
+            messages.warning(
+                request,
+                "Could not send the verification code. "
+                "Please try again or contact an administrator.",
+            )
         return redirect(reverse('mfa_verify'))
 
 
