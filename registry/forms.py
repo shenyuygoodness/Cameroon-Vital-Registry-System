@@ -2,6 +2,7 @@ from django import forms
 from django.utils import timezone
 from datetime import date
 from registry.models import Citizen, BirthDeclaration, DeathDeclaration, get_hash
+from registry.validators import validate_image_upload
 
 class CitizenForm(forms.ModelForm):
     class Meta:
@@ -10,7 +11,10 @@ class CitizenForm(forms.ModelForm):
         widgets = {
             'dob': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'gender': forms.Select(attrs={'class': 'form-select'}),
-            'photo': forms.FileInput(attrs={'class': 'form-control'}),
+            'photo': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.jpg,.jpeg,.png,.webp',
+            }),
             'father': forms.Select(attrs={'class': 'form-select'}),
             'mother': forms.Select(attrs={'class': 'form-select'}),
             'national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 112233445'}),
@@ -38,6 +42,9 @@ class CitizenForm(forms.ModelForm):
         self.fields['last_name'].required = False
         self.fields['father'].required = False
         self.fields['mother'].required = False
+
+        # Attach upload security validator to the photo field
+        self.fields['photo'].validators.append(validate_image_upload)
 
     def clean(self):
         cleaned_data = super().clean()

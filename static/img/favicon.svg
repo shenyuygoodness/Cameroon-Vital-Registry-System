@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <clipPath id="clip">
+      <rect width="32" height="32" rx="5"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <!-- Cameroon flag: green | red | yellow -->
+    <rect x="0"  y="0" width="11" height="32" fill="#007A5E"/>
+    <rect x="11" y="0" width="10" height="32" fill="#CE1126"/>
+    <rect x="21" y="0" width="11" height="32" fill="#FCD116"/>
+    <!-- Five-pointed star centred on the red stripe -->
+    <polygon
+      points="16,10.5 17.4,14.6 21.7,14.6 18.2,17.1 19.5,21.2 16,18.7 12.5,21.2 13.8,17.1 10.3,14.6 14.6,14.6"
+      fill="#FCD116"/>
+  </g>
+</svg>
