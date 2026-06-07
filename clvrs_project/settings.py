@@ -241,6 +241,11 @@ EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CLVRS Registry <noreply@clvrs.cm>')
+# Hard limit on SMTP connection time. Without this, a blocked/unreachable SMTP
+# server hangs the request until gunicorn kills the worker (120 s → 500 error).
+# With a short timeout the socket raises an exception our try/except can catch,
+# and the user is redirected to /mfa/verify/ with a "Resend Code" warning.
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=10)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
