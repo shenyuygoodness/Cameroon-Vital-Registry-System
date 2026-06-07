@@ -30,7 +30,13 @@ def security_txt(request):
     )
     return HttpResponse(content, content_type='text/plain')
 
+
+def health_check(request):
+    return HttpResponse("ok", status=200, content_type='text/plain')
+
+
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('clvrs-admin-portal/', admin.site.urls),
     path('.well-known/security.txt', security_txt),
     path('i18n/', include('django.conf.urls.i18n')),

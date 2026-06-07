@@ -204,6 +204,11 @@ SECURE_HSTS_SECONDS            = 0 if DEBUG else 31536000   # 1 year in producti
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD            = not DEBUG
 
+# ── SSL redirect exemptions ──
+# Railway healthcheck probes use plain HTTP — exempt /health/ so it gets 200
+# instead of being redirected to HTTPS (which Railway doesn't follow).
+SECURE_REDIRECT_EXEMPT = [r'^health/$']
+
 # ── Content security ──
 X_FRAME_OPTIONS          = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
