@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Register Divorce" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white py-3">
+                <h4 class="mb-0">{% trans "Divorce Declaration / Déclaration de Divorce" %}</h4>
+                <small class="text-muted">{% trans "Will remain PENDING until a second officer confirms the declaration." %}</small>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="alert alert-warning py-2 small mb-4">
+                    <strong>{% trans "Guidelines / Directives:" %}</strong>
+                    <ul class="mb-0">
+                        <li>{% trans "A court judgment (arrêt) from a competent Cameroonian court is required (Law No. 2011/011, Art. 64)." %}</li>
+                        <li>{% trans "Provide the exact tribunal name and judgment reference number." %}</li>
+                        <li>{% trans "If the original marriage was registered in this system, link it via the field below." %}</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- Linked marriage -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#5B2C6F;">
+                        <i class="fas fa-link me-2"></i>{% trans "Linked Marriage Record / Mariage Lié" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">{{ form.marriage|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Ex-Husband -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#5B2C6F;">
+                        <i class="fas fa-male me-2"></i>{% trans "Ex-Husband / Ex-Époux" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.ex_husband_first_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.ex_husband_last_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.ex_husband_national_id|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Ex-Wife -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#5B2C6F;">
+                        <i class="fas fa-female me-2"></i>{% trans "Ex-Wife / Ex-Épouse" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.ex_wife_first_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.ex_wife_last_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.ex_wife_national_id|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Court Decree -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#5B2C6F;">
+                        <i class="fas fa-gavel me-2"></i>{% trans "Court Decree / Décision Judiciaire" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">{{ form.court_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.judgment_number|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.date_of_divorce|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.date_of_marriage|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.subdivision|as_crispy_field }}</div>
+                    </div>
+
+                    {{ form.remarks|as_crispy_field }}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a href="{% url 'registry:dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                        <button type="submit" class="btn px-4 py-2 text-white" style="background-color:#5B2C6F;">
+                            <i class="fas fa-save me-2"></i>{% trans "Submit Divorce Declaration" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

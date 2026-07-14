@@ -50,6 +50,123 @@
 {% endif %}
 
 
+<!-- ── VITAL STATISTICS ── -->
+{% if user.is_super_admin or user.is_council_officer or user.is_regional_admin %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-bar me-2"></i>{% trans "Vital Statistics" %} — {{ stats_year }}</span>
+                <form method="get" class="d-flex align-items-center gap-2 mb-0">
+                    <label class="text-white small mb-0">{% trans "Year:" %}</label>
+                    <select name="stats_year" class="form-select form-select-sm bg-dark text-white border-secondary" style="width:100px;" onchange="this.form.submit()">
+                        {% for yr in year_range %}
+                            <option value="{{ yr }}" {% if yr == stats_year %}selected{% endif %}>{{ yr }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded p-3 text-center h-100" style="border-color:#28a745 !important;">
+                            <div class="text-success fw-bold fs-2">{{ stat_births|default:"0" }}</div>
+                            <div class="small text-muted">{% trans "Births Registered" %}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded p-3 text-center h-100" style="border-color:#dc3545 !important;">
+                            <div class="text-danger fw-bold fs-2">{{ stat_deaths|default:"0" }}</div>
+                            <div class="small text-muted">{% trans "Deaths Registered" %}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded p-3 text-center h-100" style="border-color:#8B6914 !important;">
+                            <div class="fw-bold fs-2" style="color:#8B6914;">{{ stat_marriages|default:"0" }}</div>
+                            <div class="small text-muted">{% trans "Marriages Confirmed" %}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded p-3 text-center h-100" style="border-color:#5B2C6F !important;">
+                            <div class="fw-bold fs-2" style="color:#5B2C6F;">{{ stat_divorces|default:"0" }}</div>
+                            <div class="small text-muted">{% trans "Divorces Confirmed" %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trend chart -->
+                {% if trend_years %}
+                <canvas id="vitalTrendChart" style="max-height:280px;"
+                        data-years="{{ trend_years|safe }}"
+                        data-births="{{ trend_births|safe }}"
+                        data-deaths="{{ trend_deaths|safe }}"
+                        data-marriages="{{ trend_marriages|safe }}"
+                        data-divorces="{{ trend_divorces|safe }}"></canvas>
+                {% endif %}
+
+                <!-- Regional / subdivision breakdown table -->
+                {% if region_stats %}
+                <div class="table-responsive mt-4">
+                    <h6 class="text-muted">{% trans "Breakdown by Region" %} ({{ stats_year }})</h6>
+                    <table class="table table-sm table-bordered table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>{% trans "Region" %}</th>
+                                <th class="text-success text-center">{% trans "Births" %}</th>
+                                <th class="text-danger text-center">{% trans "Deaths" %}</th>
+                                <th class="text-center" style="color:#8B6914;">{% trans "Marriages" %}</th>
+                                <th class="text-center" style="color:#5B2C6F;">{% trans "Divorces" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in region_stats %}
+                            <tr>
+                                <td>{{ r.name }}</td>
+                                <td class="text-center">{{ r.births }}</td>
+                                <td class="text-center">{{ r.deaths }}</td>
+                                <td class="text-center">{{ r.marriages }}</td>
+                                <td class="text-center">{{ r.divorces }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if subdivision_stats %}
+                <div class="table-responsive mt-4">
+                    <h6 class="text-muted">{% trans "Breakdown by Subdivision" %} ({{ stats_year }})</h6>
+                    <table class="table table-sm table-bordered table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>{% trans "Subdivision" %}</th>
+                                <th class="text-success text-center">{% trans "Births" %}</th>
+                                <th class="text-danger text-center">{% trans "Deaths" %}</th>
+                                <th class="text-center" style="color:#8B6914;">{% trans "Marriages" %}</th>
+                                <th class="text-center" style="color:#5B2C6F;">{% trans "Divorces" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in subdivision_stats %}
+                            <tr>
+                                <td>{{ s.name }}</td>
+                                <td class="text-center">{{ s.births }}</td>
+                                <td class="text-center">{{ s.deaths }}</td>
+                                <td class="text-center">{{ s.marriages }}</td>
+                                <td class="text-center">{{ s.divorces }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
 <!-- ── REGIONAL ADMIN ── -->
 {% if user.is_regional_admin %}
 <div class="row mb-4">
@@ -103,13 +220,15 @@
             <div class="card-header bg-dark text-white">{% trans "Subdivision Actions" %}</div>
             <div class="card-body d-flex flex-wrap gap-2">
                 <a href="{% url 'registry:citizen_create' %}" class="btn btn-primary">{% trans "Register New Citizen" %}</a>
+                <a href="{% url 'registry:marriage_create' %}" class="btn btn-outline-warning text-dark">{% trans "Register Marriage" %}</a>
+                <a href="{% url 'registry:divorce_create' %}" class="btn btn-outline-secondary" style="border-color:#5B2C6F;color:#5B2C6F;">{% trans "Register Divorce" %}</a>
                 <a href="{% url 'registry:pending_list' %}" class="btn btn-warning text-dark position-relative">
                     {% trans "Review Pending Declarations" %}
-                    {% if total_births_pending or total_deaths_pending %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ total_births_pending|add:total_deaths_pending }}
-                        </span>
+                    {% with total=total_births_pending|add:total_deaths_pending|add:total_marriages_pending|add:total_divorces_pending %}
+                    {% if total %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ total }}</span>
                     {% endif %}
+                    {% endwith %}
                 </a>
                 <a href="{% url 'registry:bulk_import' %}" class="btn btn-outline-primary">{% trans "Bulk Excel Upload" %}</a>
                 <a href="{% url 'registry:export_csv' %}" class="btn btn-outline-secondary">{% trans "Export Citizens (CSV)" %}</a>

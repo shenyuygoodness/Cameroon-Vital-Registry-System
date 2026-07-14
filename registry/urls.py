@@ -7,7 +7,9 @@ from registry.views import (
     DeathDeclarationReviewView, BirthCertificatePDFView,
     DeathCertificatePDFView, BulkImportView, DownloadTemplateView,
     ExportCSVView, SecureMediaView, UserManagementDashboardView,
-    ResendInvitationView, CancelAccountView
+    ResendInvitationView, CancelAccountView,
+    MarriageRegistrationCreateView, MarriageReviewView, MarriageCertificatePDFView,
+    DivorceDeclarationCreateView, DivorceReviewView, DivorceCertificatePDFView,
 )
 
 app_name = 'registry'
@@ -33,6 +35,16 @@ urlpatterns = [
     # Certificates PDF
     path('certificates/birth/<int:pk>/pdf/', BirthCertificatePDFView.as_view(), name='birth_certificate_pdf'),
     path('certificates/death/<int:pk>/pdf/', DeathCertificatePDFView.as_view(), name='death_certificate_pdf'),
+    path('certificates/marriage/<int:pk>/pdf/', MarriageCertificatePDFView.as_view(), name='marriage_certificate_pdf'),
+
+    # Marriage
+    path('declarations/marriage/new/', MarriageRegistrationCreateView.as_view(), name='marriage_create'),
+    path('declarations/marriage/<int:pk>/review/', MarriageReviewView.as_view(), name='marriage_review'),
+
+    # Divorce
+    path('declarations/divorce/new/', DivorceDeclarationCreateView.as_view(), name='divorce_create'),
+    path('declarations/divorce/<int:pk>/review/', DivorceReviewView.as_view(), name='divorce_review'),
+    path('certificates/divorce/<int:pk>/pdf/', DivorceCertificatePDFView.as_view(), name='divorce_certificate_pdf'),
     
     # Bulk Ops
     path('bulk/import/', BulkImportView.as_view(), name='bulk_import'),

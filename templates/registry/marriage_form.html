@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Register Marriage" %} - CLVRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white py-3">
+                <h4 class="mb-0">{% trans "Marriage Registration / Enregistrement de Mariage" %}</h4>
+                <small class="text-muted">{% trans "Will remain PENDING until a second officer confirms the registration." %}</small>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="alert alert-info py-2 small mb-4">
+                    <strong>{% trans "Guidelines / Directives:" %}</strong>
+                    <ul class="mb-0">
+                        <li>{% trans "Both parties must be at least 18 years of age at the time of marriage." %}</li>
+                        <li>{% trans "Two witnesses with valid National IDs are required by Cameroonian law (Law No. 2011/011)." %}</li>
+                        <li>{% trans "A marriage registration fee of 50,000 CFA (stamp duties) applies." %}</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- Groom -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#8B6914;">
+                        <i class="fas fa-male me-2"></i>{% trans "Groom / Époux" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.husband_first_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.husband_last_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.husband_dob|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.husband_national_id|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Bride -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#8B6914;">
+                        <i class="fas fa-female me-2"></i>{% trans "Bride / Épouse" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.wife_first_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.wife_last_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.wife_dob|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.wife_national_id|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Event details -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#8B6914;">
+                        <i class="fas fa-ring me-2"></i>{% trans "Marriage Details / Détails du Mariage" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.date_of_marriage|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.place_of_marriage|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.marriage_type|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.subdivision|as_crispy_field }}</div>
+                    </div>
+
+                    <!-- Witnesses -->
+                    <h5 class="border-bottom pb-2 mb-3" style="color:#8B6914;">
+                        <i class="fas fa-users me-2"></i>{% trans "Witnesses / Témoins" %}
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">{{ form.witness_1_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.witness_2_name|as_crispy_field }}</div>
+                    </div>
+
+                    {{ form.remarks|as_crispy_field }}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a href="{% url 'registry:dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                        <button type="submit" class="btn btn-warning px-4 py-2">
+                            <i class="fas fa-save me-2"></i>{% trans "Submit Marriage Registration" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

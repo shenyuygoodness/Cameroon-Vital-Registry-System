@@ -279,7 +279,129 @@ class DeathDeclaration(VitalEvent):
         super().save(*args, **kwargs)
 
 
-# 5. Audit Logging
+class MarriageRegistration(VitalEvent):
+    class MarriageType(models.TextChoices):
+        MONOGAMOUS = 'MONOGAMOUS', 'Monogamous / Monogame'
+        POLYGAMOUS = 'POLYGAMOUS', 'Polygamous / Polygame'
+
+    # Husband
+    husband_first_name = models.CharField(max_length=100)
+    husband_last_name = models.CharField(max_length=100)
+    husband_dob = models.DateField()
+    husband_national_id = EncryptedCharField(max_length=255, blank=True, null=True)
+    husband_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    husband_citizen = models.ForeignKey(
+        Citizen, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='marriages_as_husband',
+    )
+
+    # Wife
+    wife_first_name = models.CharField(max_length=100)
+    wife_last_name = models.CharField(max_length=100)
+    wife_dob = models.DateField()
+    wife_national_id = EncryptedCharField(max_length=255, blank=True, null=True)
+    wife_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    wife_citizen = models.ForeignKey(
+        Citizen, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='marriages_as_wife',
+    )
+
+    # Event details
+    date_of_marriage = models.DateField()
+    place_of_marriage = models.CharField(max_length=150)
+    marriage_type = models.CharField(
+        max_length=20, choices=MarriageType.choices, default=MarriageType.MONOGAMOUS,
+    )
+
+    # Witnesses (Cameroon law requires at least two)
+    witness_1_name = models.CharField(max_length=200)
+    witness_2_name = models.CharField(max_length=200)
+
+    subdivision = models.ForeignKey(
+        Subdivision, on_delete=models.PROTECT, related_name='marriage_registrations',
+    )
+
+    def __str__(self):
+        return (
+            f"Marriage {self.declaration_number} "
+            f"({self.husband_first_name} {self.husband_last_name} & "
+            f"{self.wife_first_name} {self.wife_last_name})"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.declaration_number:
+            year = self.date_of_marriage.year if self.date_of_marriage else timezone.now().year
+            for _ in range(10):
+                serial = uuid.uuid4().hex[:8].upper()
+                candidate = f"CLVRS-W-{year}-{serial}"
+                if not MarriageRegistration.objects.filter(declaration_number=candidate).exists():
+                    self.declaration_number = candidate
+                    break
+        self.husband_national_id_hash = get_hash(self.husband_national_id) if self.husband_national_id else None
+        self.wife_national_id_hash = get_hash(self.wife_national_id) if self.wife_national_id else None
+        super().save(*args, **kwargs)
+
+
+# 5. Divorce Declarations
+class DivorceDeclaration(VitalEvent):
+    # Optional link to the marriage record in this system
+    marriage = models.ForeignKey(
+        MarriageRegistration, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='divorce_declarations',
+    )
+
+    # Ex-husband
+    ex_husband_first_name = models.CharField(max_length=100)
+    ex_husband_last_name = models.CharField(max_length=100)
+    ex_husband_national_id = EncryptedCharField(max_length=255, blank=True, null=True)
+    ex_husband_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    ex_husband_citizen = models.ForeignKey(
+        Citizen, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='divorces_as_husband',
+    )
+
+    # Ex-wife
+    ex_wife_first_name = models.CharField(max_length=100)
+    ex_wife_last_name = models.CharField(max_length=100)
+    ex_wife_national_id = EncryptedCharField(max_length=255, blank=True, null=True)
+    ex_wife_national_id_hash = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+    ex_wife_citizen = models.ForeignKey(
+        Citizen, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='divorces_as_wife',
+    )
+
+    # Court decree details (required by Cameroonian law)
+    court_name = models.CharField(max_length=200, help_text="Name of the court that issued the divorce decree")
+    judgment_number = models.CharField(max_length=100, help_text="Court judgment / arrêt number")
+    date_of_divorce = models.DateField(help_text="Date the court decree was issued")
+    date_of_marriage = models.DateField(blank=True, null=True, help_text="Date of the original marriage (if known)")
+
+    subdivision = models.ForeignKey(
+        Subdivision, on_delete=models.PROTECT, related_name='divorce_declarations',
+    )
+
+    def __str__(self):
+        return (
+            f"Divorce {self.declaration_number} "
+            f"({self.ex_husband_first_name} {self.ex_husband_last_name} & "
+            f"{self.ex_wife_first_name} {self.ex_wife_last_name})"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.declaration_number:
+            year = self.date_of_divorce.year if self.date_of_divorce else timezone.now().year
+            for _ in range(10):
+                serial = uuid.uuid4().hex[:8].upper()
+                candidate = f"CLVRS-DIV-{year}-{serial}"
+                if not DivorceDeclaration.objects.filter(declaration_number=candidate).exists():
+                    self.declaration_number = candidate
+                    break
+        self.ex_husband_national_id_hash = get_hash(self.ex_husband_national_id) if self.ex_husband_national_id else None
+        self.ex_wife_national_id_hash = get_hash(self.ex_wife_national_id) if self.ex_wife_national_id else None
+        super().save(*args, **kwargs)
+
+
+# 6. Audit Logging
 class AuditLog(models.Model):
     class Action(models.TextChoices):
         CREATE  = 'CREATE',  'Create'

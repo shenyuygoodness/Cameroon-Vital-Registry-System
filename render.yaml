@@ -40,18 +40,30 @@ services:
       - key: REDIS_URL
         value: ""
 
-      # Email (SMTP via Gmail)
+      # Email (SMTP via Gmail — port 587 + STARTTLS works on Render/AWS)
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
+      - key: EMAIL_USE_SSL
+        value: "False"
+      - key: EMAIL_TIMEOUT
+        value: "30"
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
       - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+      # Superadmin — set these manually in the Render dashboard
+      - key: SUPERADMIN_USERNAME
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: SUPERADMIN_EMAIL
         sync: false
 
 databases:

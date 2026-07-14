@@ -315,9 +315,11 @@ class ActivateAccountView(View):
             form.save()
             user.is_active = True
             user.save(update_fields=['is_active'])
-            auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            messages.success(request, f"Welcome, {user.get_full_name() or user.username}! Your account is now active.")
-            return redirect('registry:dashboard')
+            messages.success(
+                request,
+                f"Account activated successfully. Please log in with your new credentials.",
+            )
+            return redirect('login')
 
         return render(request, 'accounts/activate.html', {
             'form': form,

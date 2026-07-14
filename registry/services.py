@@ -501,7 +501,158 @@ def generate_birth_certificate_pdf(declaration):
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
     ]))
     story.append(sig_table)
-    
+
+    doc.build(story, canvasmaker=CertificateCanvas)
+    buffer.seek(0)
+    return buffer
+
+
+def generate_marriage_certificate_pdf(registration):
+    """
+    Generates a bilingual Marriage Certificate PDF in-memory.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40,
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'CertTitle', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=20, leading=24,
+        textColor=colors.HexColor('#8B6914'),
+        alignment=1, spaceAfter=5,
+    )
+    subtitle_style = ParagraphStyle(
+        'CertSubtitle', parent=styles['Normal'],
+        fontName='Helvetica-BoldOblique', fontSize=14, leading=16,
+        textColor=colors.HexColor('#4A4A4A'), alignment=1, spaceAfter=15,
+    )
+    header_left = ParagraphStyle(
+        'HeaderLeft', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=0,
+    )
+    header_right = ParagraphStyle(
+        'HeaderRight', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=2,
+    )
+    body_style = ParagraphStyle(
+        'CertBody', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=11, leading=15, spaceAfter=6,
+    )
+    label_style = ParagraphStyle(
+        'CertLabel', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=11, leading=15,
+    )
+    section_style = ParagraphStyle(
+        'CertSection', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=12, leading=14,
+        textColor=colors.HexColor('#8B6914'), spaceAfter=4, spaceBefore=10,
+    )
+
+    story = []
+
+    # Cameroon bilingual header
+    header_data = [
+        [
+            Paragraph("REPUBLIC OF CAMEROON<br/>Peace - Work - Fatherland<br/>--------", header_left),
+            Paragraph("REPUBLIQUE DU CAMEROUN<br/>Paix - Travail - Patrie<br/>--------", header_right),
+        ],
+        [
+            Paragraph(
+                f"MINISTRY OF DECENTRALIZATION<br/>AND LOCAL DEVELOPMENT<br/>"
+                f"<b>SUBDIVISION: {registration.subdivision.name.upper()}</b>", header_left,
+            ),
+            Paragraph(
+                f"MINISTERE DE LA DECENTRALISATION<br/>ET DU DEVELOPPEMENT LOCAL<br/>"
+                f"<b>COMMUNE DE {registration.subdivision.name.upper()}</b>", header_right,
+            ),
+        ],
+    ]
+    header_table = Table(header_data, colWidths=[260, 260])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 15))
+
+    story.append(Paragraph("MARRIAGE CERTIFICATE", title_style))
+    story.append(Paragraph("ACTE DE MARIAGE", subtitle_style))
+    story.append(Spacer(1, 10))
+
+    meta_data = [
+        [Paragraph("Registration No. / N° Acte:", label_style), Paragraph(registration.declaration_number, body_style)],
+        [Paragraph("Date of Marriage / Date de Mariage:", label_style), Paragraph(registration.date_of_marriage.strftime('%B %d, %Y'), body_style)],
+        [Paragraph("Place / Lieu:", label_style), Paragraph(registration.place_of_marriage, body_style)],
+        [Paragraph("Type of Marriage / Type de Mariage:", label_style), Paragraph(registration.get_marriage_type_display(), body_style)],
+    ]
+    meta_table = Table(meta_data, colWidths=[210, 310])
+    meta_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    story.append(meta_table)
+
+    story.append(Paragraph("GROOM / ÉPOUX", section_style))
+    husband_data = [
+        [Paragraph("Full Name / Nom Complet:", label_style), Paragraph(f"{registration.husband_first_name} {registration.husband_last_name}", body_style)],
+        [Paragraph("Date of Birth / Date de Naissance:", label_style), Paragraph(registration.husband_dob.strftime('%B %d, %Y'), body_style)],
+        [Paragraph("National ID / CNI:", label_style), Paragraph(mask_nid(registration.husband_national_id) if registration.husband_national_id else 'N/A', body_style)],
+    ]
+    husband_table = Table(husband_data, colWidths=[210, 310])
+    husband_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    story.append(husband_table)
+
+    story.append(Paragraph("BRIDE / ÉPOUSE", section_style))
+    wife_data = [
+        [Paragraph("Full Name / Nom Complet:", label_style), Paragraph(f"{registration.wife_first_name} {registration.wife_last_name}", body_style)],
+        [Paragraph("Date of Birth / Date de Naissance:", label_style), Paragraph(registration.wife_dob.strftime('%B %d, %Y'), body_style)],
+        [Paragraph("National ID / CNI:", label_style), Paragraph(mask_nid(registration.wife_national_id) if registration.wife_national_id else 'N/A', body_style)],
+    ]
+    wife_table = Table(wife_data, colWidths=[210, 310])
+    wife_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    story.append(wife_table)
+
+    story.append(Paragraph("WITNESSES / TÉMOINS & APPROVAL", section_style))
+    witness_data = [
+        [Paragraph("Witness 1 / Témoin 1:", label_style), Paragraph(registration.witness_1_name, body_style)],
+        [Paragraph("Witness 2 / Témoin 2:", label_style), Paragraph(registration.witness_2_name, body_style)],
+        [Paragraph("Date of Approval / Date de Validation:", label_style), Paragraph(registration.confirmed_at.strftime('%B %d, %Y') if registration.confirmed_at else 'N/A', body_style)],
+        [Paragraph("Registering Officer / Officier d'État Civil:", label_style), Paragraph(registration.reviewed_by.get_full_name() if registration.reviewed_by else 'N/A', body_style)],
+    ]
+    witness_table = Table(witness_data, colWidths=[210, 310])
+    witness_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    story.append(witness_table)
+    story.append(Spacer(1, 20))
+
+    sig_data = [
+        [
+            Paragraph("Registering Officer Signature & Stamp<br/>Signature et Sceau de l'Officier", header_left),
+            Paragraph("Subdivision Municipal Seal<br/>Sceau Municipal de la Commune", header_right),
+        ],
+        [Spacer(1, 40), Spacer(1, 40)],
+    ]
+    sig_table = Table(sig_data, colWidths=[260, 260])
+    sig_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+    story.append(sig_table)
+
     doc.build(story, canvasmaker=CertificateCanvas)
     buffer.seek(0)
     return buffer
@@ -650,7 +801,163 @@ def generate_death_certificate_pdf(declaration):
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
     ]))
     story.append(sig_table)
-    
+
+    doc.build(story, canvasmaker=CertificateCanvas)
+    buffer.seek(0)
+    return buffer
+
+
+def generate_divorce_certificate_pdf(declaration):
+    """
+    Generates a bilingual Divorce Certificate PDF in-memory.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40,
+    )
+
+    styles = getSampleStyleSheet()
+
+    PURPLE = colors.HexColor('#5B2C6F')
+
+    title_style = ParagraphStyle(
+        'DivTitle', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=20, leading=24,
+        textColor=PURPLE, alignment=1, spaceAfter=5,
+    )
+    subtitle_style = ParagraphStyle(
+        'DivSubtitle', parent=styles['Normal'],
+        fontName='Helvetica-BoldOblique', fontSize=14, leading=16,
+        textColor=colors.HexColor('#4A4A4A'), alignment=1, spaceAfter=15,
+    )
+    header_left = ParagraphStyle(
+        'DivHeaderLeft', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=0,
+    )
+    header_right = ParagraphStyle(
+        'DivHeaderRight', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=2,
+    )
+    body_style = ParagraphStyle(
+        'DivBody', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=11, leading=15, spaceAfter=6,
+    )
+    label_style = ParagraphStyle(
+        'DivLabel', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=11, leading=15,
+    )
+    section_style = ParagraphStyle(
+        'DivSection', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=12, leading=14,
+        textColor=PURPLE, spaceAfter=4, spaceBefore=10,
+    )
+
+    story = []
+
+    header_data = [
+        [
+            Paragraph("REPUBLIC OF CAMEROON<br/>Peace - Work - Fatherland<br/>--------", header_left),
+            Paragraph("REPUBLIQUE DU CAMEROUN<br/>Paix - Travail - Patrie<br/>--------", header_right),
+        ],
+        [
+            Paragraph(
+                f"MINISTRY OF DECENTRALIZATION<br/>AND LOCAL DEVELOPMENT<br/>"
+                f"<b>SUBDIVISION: {declaration.subdivision.name.upper()}</b>", header_left,
+            ),
+            Paragraph(
+                f"MINISTÈRE DE LA DÉCENTRALISATION<br/>ET DU DÉVELOPPEMENT LOCAL<br/>"
+                f"<b>SUBDIVISION: {declaration.subdivision.name.upper()}</b>", header_right,
+            ),
+        ],
+    ]
+    header_table = Table(header_data, colWidths=[260, 260])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("CERTIFICATE OF DIVORCE", title_style))
+    story.append(Paragraph("ACTE DE DIVORCE", subtitle_style))
+    story.append(Spacer(1, 8))
+
+    meta_data = [
+        [Paragraph("<b>Declaration No. / N° Acte:</b>", label_style), Paragraph(declaration.declaration_number, body_style)],
+        [Paragraph("<b>Date Issued / Date d'émission:</b>", label_style), Paragraph(str(declaration.confirmed_at.date()) if declaration.confirmed_at else "—", body_style)],
+        [Paragraph("<b>Status / Statut:</b>", label_style), Paragraph(declaration.get_status_display(), body_style)],
+    ]
+    meta_table = Table(meta_data, colWidths=[200, 320])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#EDE8F5')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 14))
+
+    story.append(Paragraph("EX-HUSBAND / EX-ÉPOUX", section_style))
+    h_data = [
+        [Paragraph("<b>First Name / Prénom:</b>", label_style), Paragraph(declaration.ex_husband_first_name, body_style)],
+        [Paragraph("<b>Last Name / Nom:</b>", label_style), Paragraph(declaration.ex_husband_last_name, body_style)],
+        [Paragraph("<b>National ID / CNI:</b>", label_style), Paragraph(declaration.ex_husband_national_id or "—", body_style)],
+    ]
+    h_table = Table(h_data, colWidths=[200, 320])
+    h_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F5EEF8')),
+    ]))
+    story.append(h_table)
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph("EX-WIFE / EX-ÉPOUSE", section_style))
+    w_data = [
+        [Paragraph("<b>First Name / Prénom:</b>", label_style), Paragraph(declaration.ex_wife_first_name, body_style)],
+        [Paragraph("<b>Last Name / Nom:</b>", label_style), Paragraph(declaration.ex_wife_last_name, body_style)],
+        [Paragraph("<b>National ID / CNI:</b>", label_style), Paragraph(declaration.ex_wife_national_id or "—", body_style)],
+    ]
+    w_table = Table(w_data, colWidths=[200, 320])
+    w_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F5EEF8')),
+    ]))
+    story.append(w_table)
+    story.append(Spacer(1, 10))
+
+    story.append(Paragraph("COURT DECREE / DÉCISION JUDICIAIRE", section_style))
+    dom_str = str(declaration.date_of_marriage) if declaration.date_of_marriage else "—"
+    decree_data = [
+        [Paragraph("<b>Court / Tribunal:</b>", label_style), Paragraph(declaration.court_name, body_style)],
+        [Paragraph("<b>Judgment No. / N° Jugement:</b>", label_style), Paragraph(declaration.judgment_number, body_style)],
+        [Paragraph("<b>Date of Decree / Date du Jugement:</b>", label_style), Paragraph(str(declaration.date_of_divorce), body_style)],
+        [Paragraph("<b>Date of Marriage / Date du Mariage:</b>", label_style), Paragraph(dom_str, body_style)],
+    ]
+    decree_table = Table(decree_data, colWidths=[200, 320])
+    decree_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#EDE8F5')),
+    ]))
+    story.append(decree_table)
+    story.append(Spacer(1, 20))
+
+    story.append(Paragraph("APPROVAL / APPROBATION", section_style))
+    sig_data = [
+        [
+            Paragraph("<b>Confirmed By / Confirmé par:</b><br/><br/>____________________<br/>"
+                      f"{(declaration.reviewed_by.get_full_name() if declaration.reviewed_by else '—')}", body_style),
+            Paragraph("<b>Official Stamp / Cachet Officiel:</b><br/><br/><br/>____________________", body_style),
+        ],
+    ]
+    sig_table = Table(sig_data, colWidths=[260, 260])
+    sig_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+    story.append(sig_table)
+
     doc.build(story, canvasmaker=CertificateCanvas)
     buffer.seek(0)
     return buffer

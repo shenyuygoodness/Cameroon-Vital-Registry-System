@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 from datetime import date
-from registry.models import Citizen, BirthDeclaration, DeathDeclaration, get_hash
+from registry.models import Citizen, BirthDeclaration, DeathDeclaration, MarriageRegistration, DivorceDeclaration, get_hash
 from registry.validators import validate_image_upload
 
 class CitizenForm(forms.ModelForm):
@@ -189,6 +189,135 @@ class DeathDeclarationForm(forms.ModelForm):
                 self.add_error('death_date', f"Date of death ({death_date}) cannot be before the citizen's birth date ({citizen.dob}).")
 
         return cleaned_data
+
+
+class MarriageRegistrationForm(forms.ModelForm):
+    class Meta:
+        model = MarriageRegistration
+        fields = [
+            'husband_first_name', 'husband_last_name', 'husband_dob', 'husband_national_id',
+            'wife_first_name', 'wife_last_name', 'wife_dob', 'wife_national_id',
+            'date_of_marriage', 'place_of_marriage', 'marriage_type',
+            'witness_1_name', 'witness_2_name',
+            'subdivision', 'remarks',
+        ]
+        widgets = {
+            'husband_first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'husband_last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'husband_dob': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'husband_national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Husband CNI (Required)'}),
+            'wife_first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'wife_last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'wife_dob': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'wife_national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Wife CNI (Required)'}),
+            'date_of_marriage': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'place_of_marriage': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Yaoundé Town Hall'}),
+            'marriage_type': forms.Select(attrs={'class': 'form-select'}),
+            'witness_1_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Witness Full Name'}),
+            'witness_2_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Second Witness Full Name'}),
+            'subdivision': forms.Select(attrs={'class': 'form-select'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional observations...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user and not user.is_super_admin:
+            if user.subdivision:
+                self.fields['subdivision'].queryset = (
+                    Citizen._meta.get_field('subdivision').remote_field.model.objects
+                    .filter(id=user.subdivision.id)
+                )
+                self.fields['subdivision'].initial = user.subdivision
+                self.fields['subdivision'].disabled = True
+
+    def clean(self):
+        cleaned = super().clean()
+        dom = cleaned.get('date_of_marriage')
+        husband_dob = cleaned.get('husband_dob')
+        wife_dob = cleaned.get('wife_dob')
+
+        if dom and dom > date.today():
+            self.add_error('date_of_marriage', "Date of marriage cannot be in the future.")
+
+        if dom and husband_dob and dom < husband_dob:
+            self.add_error('date_of_marriage', "Date of marriage cannot be before the husband's date of birth.")
+
+        if dom and wife_dob and dom < wife_dob:
+            self.add_error('date_of_marriage', "Date of marriage cannot be before the wife's date of birth.")
+
+        h_nic = cleaned.get('husband_national_id', '').strip() if cleaned.get('husband_national_id') else ''
+        w_nic = cleaned.get('wife_national_id', '').strip() if cleaned.get('wife_national_id') else ''
+        if h_nic and w_nic and h_nic.upper() == w_nic.upper():
+            self.add_error('wife_national_id', "Husband and wife cannot have the same National ID.")
+
+        return cleaned
+
+
+class DivorceDeclarationForm(forms.ModelForm):
+    class Meta:
+        model = DivorceDeclaration
+        fields = [
+            'marriage',
+            'ex_husband_first_name', 'ex_husband_last_name', 'ex_husband_national_id',
+            'ex_wife_first_name', 'ex_wife_last_name', 'ex_wife_national_id',
+            'court_name', 'judgment_number', 'date_of_divorce', 'date_of_marriage',
+            'subdivision', 'remarks',
+        ]
+        widgets = {
+            'marriage': forms.Select(attrs={'class': 'form-select'}),
+            'ex_husband_first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'ex_husband_last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'ex_husband_national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex-Husband CNI'}),
+            'ex_wife_first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'ex_wife_last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'ex_wife_national_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex-Wife CNI'}),
+            'court_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Tribunal de Grande Instance de Yaoundé'}),
+            'judgment_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Arrêt No. 123/2024'}),
+            'date_of_divorce': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'date_of_marriage': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'subdivision': forms.Select(attrs={'class': 'form-select'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional observations...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['marriage'].required = False
+        self.fields['marriage'].empty_label = "— Not linked to a system record —"
+        self.fields['date_of_marriage'].required = False
+        # Only confirmed marriages are valid to link to a divorce
+        confirmed_marriages = MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED)
+        if user and not user.is_super_admin:
+            if user.subdivision:
+                self.fields['subdivision'].queryset = (
+                    Citizen._meta.get_field('subdivision').remote_field.model.objects
+                    .filter(id=user.subdivision.id)
+                )
+                self.fields['subdivision'].initial = user.subdivision
+                self.fields['subdivision'].disabled = True
+            self.fields['marriage'].queryset = confirmed_marriages.filter(subdivision=user.subdivision)
+        else:
+            self.fields['marriage'].queryset = confirmed_marriages
+
+    def clean(self):
+        cleaned = super().clean()
+        dod = cleaned.get('date_of_divorce')
+        dom = cleaned.get('date_of_marriage')
+
+        if dod and dod > date.today():
+            self.add_error('date_of_divorce', "Date of divorce decree cannot be in the future.")
+
+        if dod and dom and dod <= dom:
+            self.add_error('date_of_divorce', "Divorce date must be after the date of marriage.")
+
+        h_nic = (cleaned.get('ex_husband_national_id') or '').strip()
+        w_nic = (cleaned.get('ex_wife_national_id') or '').strip()
+        if h_nic and w_nic and h_nic.upper() == w_nic.upper():
+            self.add_error('ex_wife_national_id', "Ex-husband and ex-wife cannot have the same National ID.")
+
+        return cleaned
+
 
 from accounts.models import User
 from registry.models import Region, Division, Subdivision

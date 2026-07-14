@@ -25,6 +25,18 @@
             {% if pending_deaths %}<span class="badge bg-danger ms-1">{{ pending_deaths.count }}</span>{% endif %}
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link position-relative font-weight-bold" id="marriages-tab" data-bs-toggle="tab" data-bs-target="#marriages" type="button" role="tab">
+            {% trans "Marriage Registrations" %}
+            {% if pending_marriages %}<span class="badge bg-danger ms-1">{{ pending_marriages.count }}</span>{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link position-relative font-weight-bold" id="divorces-tab" data-bs-toggle="tab" data-bs-target="#divorces" type="button" role="tab">
+            {% trans "Divorce Declarations" %}
+            {% if pending_divorces %}<span class="badge bg-danger ms-1">{{ pending_divorces.count }}</span>{% endif %}
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content" id="pendingTabsContent">
@@ -196,5 +208,172 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- MARRIAGE REGISTRATIONS -->
+    <div class="tab-pane fade" id="marriages" role="tabpanel">
+        <div class="row">
+            {% for reg in pending_marriages %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-start border-4" style="border-color:#8B6914 !important;">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>{% trans "Reg #:" %} <strong>{{ reg.declaration_number }}</strong></span>
+                        <span class="badge bg-warning text-dark">{% trans "Pending Review" %}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title mb-3" style="color:#8B6914;">{% trans "Marriage Registration" %}</h5>
+                        <table class="table table-sm table-borderless small mb-3">
+                            <tr>
+                                <td class="font-weight-bold text-muted" style="width:130px;">{% trans "Groom:" %}</td>
+                                <td><strong>{{ reg.husband_first_name }} {{ reg.husband_last_name }}</strong> ({{ reg.husband_dob }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Bride:" %}</td>
+                                <td><strong>{{ reg.wife_first_name }} {{ reg.wife_last_name }}</strong> ({{ reg.wife_dob }})</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Date / Place:" %}</td>
+                                <td>{{ reg.date_of_marriage }} / {{ reg.place_of_marriage }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Type:" %}</td>
+                                <td>{{ reg.get_marriage_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Witnesses:" %}</td>
+                                <td>{{ reg.witness_1_name }}, {{ reg.witness_2_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Submitted By:" %}</td>
+                                <td>{{ reg.created_by.get_full_name }}</td>
+                            </tr>
+                            {% if reg.remarks %}
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Remarks:" %}</td>
+                                <td>{{ reg.remarks }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+
+                        <hr>
+                        <div class="d-flex gap-2 justify-content-between">
+                            <form action="{% url 'registry:marriage_review' reg.pk %}" method="post" class="flex-grow-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="confirm">
+                                <button type="submit" class="btn btn-sm btn-success w-100 py-2">
+                                    {% trans "Confirm & Issue Certificate" %}
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger py-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#rejectMarriageForm{{ reg.id }}">
+                                {% trans "Reject" %}
+                            </button>
+                        </div>
+
+                        <div class="collapse mt-3" id="rejectMarriageForm{{ reg.id }}">
+                            <form action="{% url 'registry:marriage_review' reg.pk %}" method="post" class="bg-light p-3 border rounded">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="mb-2">
+                                    <label class="form-label small font-weight-bold text-danger">{% trans "Reason for Rejection" %}</label>
+                                    <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required
+                                              placeholder="{% trans "Provide reason for rejection..." %}"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-xs btn-danger w-100">{% trans "Submit Rejection" %}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5 text-muted">
+                <h5>{% trans "No pending marriage registrations to review." %}</h5>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- DIVORCE DECLARATIONS -->
+    <div class="tab-pane fade" id="divorces" role="tabpanel">
+        <div class="row">
+            {% for dec in pending_divorces %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-start border-4" style="border-color:#5B2C6F !important;">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>{% trans "Dec #:" %} <strong>{{ dec.declaration_number }}</strong></span>
+                        <span class="badge bg-warning text-dark">{% trans "Pending Review" %}</span>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title mb-3" style="color:#5B2C6F;">{% trans "Divorce Declaration" %}</h5>
+                        <table class="table table-sm table-borderless small mb-3">
+                            <tr>
+                                <td class="font-weight-bold text-muted" style="width:140px;">{% trans "Ex-Husband:" %}</td>
+                                <td><strong>{{ dec.ex_husband_first_name }} {{ dec.ex_husband_last_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Ex-Wife:" %}</td>
+                                <td><strong>{{ dec.ex_wife_first_name }} {{ dec.ex_wife_last_name }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Court:" %}</td>
+                                <td>{{ dec.court_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Judgment No.:" %}</td>
+                                <td>{{ dec.judgment_number }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Divorce Date:" %}</td>
+                                <td>{{ dec.date_of_divorce }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Submitted By:" %}</td>
+                                <td>{{ dec.created_by.get_full_name }}</td>
+                            </tr>
+                            {% if dec.remarks %}
+                            <tr>
+                                <td class="font-weight-bold text-muted">{% trans "Remarks:" %}</td>
+                                <td>{{ dec.remarks }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+
+                        <hr>
+                        <div class="d-flex gap-2 justify-content-between">
+                            <form action="{% url 'registry:divorce_review' dec.pk %}" method="post" class="flex-grow-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="confirm">
+                                <button type="submit" class="btn btn-sm btn-success w-100 py-2">
+                                    {% trans "Confirm & Issue Certificate" %}
+                                </button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-danger py-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#rejectDivorceForm{{ dec.id }}">
+                                {% trans "Reject" %}
+                            </button>
+                        </div>
+
+                        <div class="collapse mt-3" id="rejectDivorceForm{{ dec.id }}">
+                            <form action="{% url 'registry:divorce_review' dec.pk %}" method="post" class="bg-light p-3 border rounded">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="mb-2">
+                                    <label class="form-label small font-weight-bold text-danger">{% trans "Reason for Rejection" %}</label>
+                                    <textarea name="rejection_reason" class="form-control form-control-sm" rows="2" required
+                                              placeholder="{% trans "Provide reason for rejection..." %}"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-xs btn-danger w-100">{% trans "Submit Rejection" %}</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5 text-muted">
+                <h5>{% trans "No pending divorce declarations to review." %}</h5>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
 </div>
 {% endblock %}

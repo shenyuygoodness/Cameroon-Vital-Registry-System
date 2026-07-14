@@ -55,6 +55,12 @@
                                 <a class="nav-link {% if 'citizens' in request.path %}active{% endif %}" href="{% url 'registry:citizen_list' %}">{% trans "Citizens" %}</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link {% if 'marriage/new' in request.path %}active{% endif %}" href="{% url 'registry:marriage_create' %}">{% trans "Register Marriage" %}</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'divorce/new' in request.path %}active{% endif %}" href="{% url 'registry:divorce_create' %}">{% trans "Register Divorce" %}</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link {% if 'pending' in request.path %}active{% endif %}" href="{% url 'registry:pending_list' %}">
                                     {% trans "Pending Tasks" %}
                                 </a>

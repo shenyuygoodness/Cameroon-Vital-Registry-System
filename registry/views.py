@@ -21,12 +21,13 @@ from accounts.models import User
 from accounts.views import _get_client_ip
 from registry.models import (
     Region, Division, Subdivision, Citizen, Household, HouseholdMember,
-    BirthDeclaration, DeathDeclaration, AuditLog
+    BirthDeclaration, DeathDeclaration, MarriageRegistration, DivorceDeclaration, AuditLog
 )
-from registry.forms import CitizenForm, BirthDeclarationForm, DeathDeclarationForm
+from registry.forms import CitizenForm, BirthDeclarationForm, DeathDeclarationForm, MarriageRegistrationForm, DivorceDeclarationForm
 from registry.services import (
     import_citizens_from_excel, generate_excel_template,
-    generate_birth_certificate_pdf, generate_death_certificate_pdf, get_hash
+    generate_birth_certificate_pdf, generate_death_certificate_pdf,
+    generate_marriage_certificate_pdf, generate_divorce_certificate_pdf, get_hash
 )
 
 # -------------------------------------------------------------
@@ -92,6 +93,22 @@ def get_visible_deaths_qs(user):
     return DeathDeclaration.objects.none()
 
 
+def get_visible_marriages_qs(user):
+    if user.is_super_admin:
+        return MarriageRegistration.objects.all()
+    elif user.is_council_officer or user.is_regional_admin:
+        return MarriageRegistration.objects.filter(subdivision=user.subdivision)
+    return MarriageRegistration.objects.none()
+
+
+def get_visible_divorces_qs(user):
+    if user.is_super_admin:
+        return DivorceDeclaration.objects.all()
+    elif user.is_council_officer or user.is_regional_admin:
+        return DivorceDeclaration.objects.filter(subdivision=user.subdivision)
+    return DivorceDeclaration.objects.none()
+
+
 # -------------------------------------------------------------
 # 2. Dashboards View
 # -------------------------------------------------------------
@@ -103,17 +120,57 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         role = user.role
 
+        current_year = timezone.now().year
+        try:
+            stats_year = int(self.request.GET.get('stats_year', current_year))
+        except (ValueError, TypeError):
+            stats_year = current_year
+        stats_year = max(2000, min(stats_year, current_year))
+        context['stats_year'] = stats_year
+        context['year_range'] = list(range(current_year, max(2000, current_year - 9) - 1, -1))
+        trend_years = list(range(stats_year - 4, stats_year + 1))
+        context['trend_years'] = trend_years
+
         if user.is_super_admin:
             # Global aggregates
             context['total_citizens'] = Citizen.objects.count()
             context['total_births_pending'] = BirthDeclaration.objects.filter(status=BirthDeclaration.Status.PENDING).count()
             context['total_deaths_pending'] = DeathDeclaration.objects.filter(status=DeathDeclaration.Status.PENDING).count()
+            context['total_marriages_pending'] = MarriageRegistration.objects.filter(status=MarriageRegistration.Status.PENDING).count()
+            context['total_divorces_pending'] = DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.PENDING).count()
             context['total_households'] = Household.objects.count()
             # Charts preparation (Subdivision aggregates)
             subdivisions = Subdivision.objects.annotate(citizen_count=models.Count('citizens')).order_by('-citizen_count')[:5]
             context['chart_labels'] = [s.name for s in subdivisions]
             context['chart_data'] = [s.citizen_count for s in subdivisions]
             context['recent_logs'] = AuditLog.objects.all()[:10]
+
+            # --- Vital statistics for selected year ---
+            context['stat_births'] = BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=stats_year).count()
+            context['stat_deaths'] = DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=stats_year).count()
+            context['stat_marriages'] = MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=stats_year).count()
+            context['stat_divorces'] = DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=stats_year).count()
+
+            # Trend over 5 years
+            context['trend_births'] = [BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=y).count() for y in trend_years]
+            context['trend_deaths'] = [DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=y).count() for y in trend_years]
+            context['trend_marriages'] = [MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=y).count() for y in trend_years]
+            context['trend_divorces'] = [DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=y).count() for y in trend_years]
+
+            # Per-region breakdown for selected year
+            from registry.models import Region
+            regions = Region.objects.prefetch_related('divisions__subdivisions').all()
+            region_stats = []
+            for r in regions:
+                sub_ids = list(Subdivision.objects.filter(division__region=r).values_list('id', flat=True))
+                region_stats.append({
+                    'name': r.name,
+                    'births': BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=stats_year, subdivision_id__in=sub_ids).count(),
+                    'deaths': DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=stats_year, subdivision_id__in=sub_ids).count(),
+                    'marriages': MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=stats_year, subdivision_id__in=sub_ids).count(),
+                    'divorces': DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=stats_year, subdivision_id__in=sub_ids).count(),
+                })
+            context['region_stats'] = region_stats
 
         elif role == User.Role.REGIONAL_ADMIN:
             # Enforce view-only aggregate stats for assigned region. No individual records!
@@ -122,15 +179,39 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
             if region:
                 # Subdivisions in this region
                 sub_qs = Subdivision.objects.filter(division__region=region)
+                sub_ids = list(sub_qs.values_list('id', flat=True))
                 context['total_citizens'] = Citizen.objects.filter(subdivision__in=sub_qs).count()
                 context['total_births_pending'] = BirthDeclaration.objects.filter(subdivision__in=sub_qs, status=BirthDeclaration.Status.PENDING).count()
                 context['total_deaths_pending'] = DeathDeclaration.objects.filter(subdivision__in=sub_qs, status=DeathDeclaration.Status.PENDING).count()
                 context['total_households'] = Household.objects.filter(subdivision__in=sub_qs).count()
-                
+
                 # Chart: Subdivision distribution
                 subdivisions = sub_qs.annotate(citizen_count=models.Count('citizens')).order_by('-citizen_count')[:10]
                 context['chart_labels'] = [s.name for s in subdivisions]
                 context['chart_data'] = [s.citizen_count for s in subdivisions]
+
+                # Vital stats for selected year
+                context['stat_births'] = BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=stats_year, subdivision_id__in=sub_ids).count()
+                context['stat_deaths'] = DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=stats_year, subdivision_id__in=sub_ids).count()
+                context['stat_marriages'] = MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=stats_year, subdivision_id__in=sub_ids).count()
+                context['stat_divorces'] = DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=stats_year, subdivision_id__in=sub_ids).count()
+
+                context['trend_births'] = [BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=y, subdivision_id__in=sub_ids).count() for y in trend_years]
+                context['trend_deaths'] = [DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=y, subdivision_id__in=sub_ids).count() for y in trend_years]
+                context['trend_marriages'] = [MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=y, subdivision_id__in=sub_ids).count() for y in trend_years]
+                context['trend_divorces'] = [DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=y, subdivision_id__in=sub_ids).count() for y in trend_years]
+
+                # Per-subdivision breakdown
+                sub_stats = []
+                for s in sub_qs.order_by('name'):
+                    sub_stats.append({
+                        'name': s.name,
+                        'births': BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=stats_year, subdivision=s).count(),
+                        'deaths': DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=stats_year, subdivision=s).count(),
+                        'marriages': MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=stats_year, subdivision=s).count(),
+                        'divorces': DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=stats_year, subdivision=s).count(),
+                    })
+                context['subdivision_stats'] = sub_stats
             else:
                 context['total_citizens'] = 0
 
@@ -142,12 +223,25 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
                 context['total_citizens'] = Citizen.objects.filter(subdivision=sub).count()
                 context['total_births_pending'] = BirthDeclaration.objects.filter(subdivision=sub, status=BirthDeclaration.Status.PENDING).count()
                 context['total_deaths_pending'] = DeathDeclaration.objects.filter(subdivision=sub, status=DeathDeclaration.Status.PENDING).count()
+                context['total_marriages_pending'] = MarriageRegistration.objects.filter(subdivision=sub, status=MarriageRegistration.Status.PENDING).count()
+                context['total_divorces_pending'] = DivorceDeclaration.objects.filter(subdivision=sub, status=DivorceDeclaration.Status.PENDING).count()
                 context['total_households'] = Household.objects.filter(subdivision=sub).count()
-                
+
                 # Recent births & deaths
                 context['pending_births'] = BirthDeclaration.objects.filter(subdivision=sub, status=BirthDeclaration.Status.PENDING)[:5]
                 context['pending_deaths'] = DeathDeclaration.objects.filter(subdivision=sub, status=DeathDeclaration.Status.PENDING)[:5]
                 context['recent_citizens'] = Citizen.objects.filter(subdivision=sub)[:5]
+
+                # Vital stats for selected year
+                context['stat_births'] = BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=stats_year, subdivision=sub).count()
+                context['stat_deaths'] = DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=stats_year, subdivision=sub).count()
+                context['stat_marriages'] = MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=stats_year, subdivision=sub).count()
+                context['stat_divorces'] = DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=stats_year, subdivision=sub).count()
+
+                context['trend_births'] = [BirthDeclaration.objects.filter(status=BirthDeclaration.Status.CONFIRMED, child_dob__year=y, subdivision=sub).count() for y in trend_years]
+                context['trend_deaths'] = [DeathDeclaration.objects.filter(status=DeathDeclaration.Status.CONFIRMED, death_date__year=y, subdivision=sub).count() for y in trend_years]
+                context['trend_marriages'] = [MarriageRegistration.objects.filter(status=MarriageRegistration.Status.CONFIRMED, date_of_marriage__year=y, subdivision=sub).count() for y in trend_years]
+                context['trend_divorces'] = [DivorceDeclaration.objects.filter(status=DivorceDeclaration.Status.CONFIRMED, date_of_divorce__year=y, subdivision=sub).count() for y in trend_years]
 
         elif role == User.Role.HOSPITAL_STAFF:
             # Hospital staff submissions
@@ -405,6 +499,8 @@ class PendingDeclarationsListView(CouncilOfficerRequiredMixin, TemplateView):
         # Filter pending by subdivision
         context['pending_births'] = get_visible_births_qs(user).filter(status=BirthDeclaration.Status.PENDING)
         context['pending_deaths'] = get_visible_deaths_qs(user).filter(status=DeathDeclaration.Status.PENDING)
+        context['pending_marriages'] = get_visible_marriages_qs(user).filter(status=MarriageRegistration.Status.PENDING)
+        context['pending_divorces'] = get_visible_divorces_qs(user).filter(status=DivorceDeclaration.Status.PENDING)
         return context
 
 
@@ -605,6 +701,227 @@ class DeathCertificatePDFView(LoginRequiredMixin, View):
         )
         
         filename = f"Death_Certificate_{declaration.declaration_number}.pdf"
+        return FileResponse(pdf_buffer, as_attachment=False, content_type='application/pdf', filename=filename)
+
+
+# -------------------------------------------------------------
+# Marriage Registration Views
+# -------------------------------------------------------------
+class MarriageRegistrationCreateView(CouncilOfficerRequiredMixin, CreateView):
+    model = MarriageRegistration
+    form_class = MarriageRegistrationForm
+    template_name = 'registry/marriage_form.html'
+    success_url = reverse_lazy('registry:pending_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        if not self.request.user.is_super_admin:
+            form.instance.subdivision = self.request.user.subdivision
+        response = super().form_valid(form)
+        AuditLog.objects.create(
+            user=self.request.user,
+            action=AuditLog.Action.CREATE,
+            model_name="MarriageRegistration",
+            record_id=str(self.object.id),
+            details=f"Submitted pending marriage registration {self.object.declaration_number}.",
+            ip_address=_get_client_ip(self.request)
+        )
+        messages.success(self.request, f"Marriage registration {self.object.declaration_number} submitted and is PENDING review.")
+        return response
+
+
+class MarriageReviewView(CouncilOfficerRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        registration = get_object_or_404(get_visible_marriages_qs(request.user), pk=kwargs.get('pk'))
+        action = request.POST.get('action')
+        reason = request.POST.get('rejection_reason', '').strip()
+
+        if registration.status != MarriageRegistration.Status.PENDING:
+            messages.error(request, "This registration has already been reviewed.")
+            return redirect('registry:pending_list')
+
+        if action == 'reject':
+            if not reason:
+                messages.error(request, "Rejection reason is required.")
+                return redirect('registry:pending_list')
+            registration.status = MarriageRegistration.Status.REJECTED
+            registration.rejection_reason = reason
+            registration.reviewed_by = request.user
+            registration.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action=AuditLog.Action.REJECT,
+                model_name="MarriageRegistration",
+                record_id=str(registration.id),
+                details=f"Rejected marriage registration {registration.declaration_number}. Reason: {reason}",
+                ip_address=_get_client_ip(request)
+            )
+            messages.warning(request, f"Marriage registration {registration.declaration_number} rejected.")
+
+        elif action == 'confirm':
+            try:
+                with transaction.atomic():
+                    # Link to citizen profiles if NICs match existing records
+                    if registration.husband_national_id_hash:
+                        registration.husband_citizen = Citizen.objects.filter(
+                            national_id_hash=registration.husband_national_id_hash
+                        ).first()
+                    if registration.wife_national_id_hash:
+                        registration.wife_citizen = Citizen.objects.filter(
+                            national_id_hash=registration.wife_national_id_hash
+                        ).first()
+
+                    registration.status = MarriageRegistration.Status.CONFIRMED
+                    registration.confirmed_at = timezone.now()
+                    registration.reviewed_by = request.user
+                    registration.save()
+
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action=AuditLog.Action.APPROVE,
+                        model_name="MarriageRegistration",
+                        record_id=str(registration.id),
+                        details=f"Confirmed marriage registration {registration.declaration_number}.",
+                        ip_address=_get_client_ip(request)
+                    )
+                messages.success(request, f"Marriage registration {registration.declaration_number} confirmed. Certificate is now available.")
+            except Exception:
+                logger.exception("Marriage review error")
+                messages.error(request, "An internal error occurred. Our team has been notified.")
+
+        return redirect('registry:pending_list')
+
+
+class MarriageCertificatePDFView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        registration = get_object_or_404(get_visible_marriages_qs(request.user), pk=kwargs.get('pk'))
+        if registration.status != MarriageRegistration.Status.CONFIRMED:
+            return HttpResponseForbidden("Certificate is not available. The registration must be confirmed first.")
+        pdf_buffer = generate_marriage_certificate_pdf(registration)
+        AuditLog.objects.create(
+            user=request.user,
+            action=AuditLog.Action.EXPORT,
+            model_name="MarriageCertificate",
+            record_id=str(registration.id),
+            details=f"Downloaded marriage certificate for registration {registration.declaration_number}.",
+            ip_address=_get_client_ip(request)
+        )
+        filename = f"Marriage_Certificate_{registration.declaration_number}.pdf"
+        return FileResponse(pdf_buffer, as_attachment=False, content_type='application/pdf', filename=filename)
+
+
+# -------------------------------------------------------------
+# 5b. Divorce Declaration Views
+# -------------------------------------------------------------
+class DivorceDeclarationCreateView(CouncilOfficerRequiredMixin, CreateView):
+    model = DivorceDeclaration
+    form_class = DivorceDeclarationForm
+    template_name = 'registry/divorce_form.html'
+    success_url = reverse_lazy('registry:pending_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        if not self.request.user.is_super_admin:
+            form.instance.subdivision = self.request.user.subdivision
+        response = super().form_valid(form)
+        AuditLog.objects.create(
+            user=self.request.user,
+            action=AuditLog.Action.CREATE,
+            model_name="DivorceDeclaration",
+            record_id=str(self.object.id),
+            details=f"Submitted pending divorce declaration {self.object.declaration_number}.",
+            ip_address=_get_client_ip(self.request)
+        )
+        messages.success(self.request, f"Divorce declaration {self.object.declaration_number} submitted and is PENDING review.")
+        return response
+
+
+class DivorceReviewView(CouncilOfficerRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        declaration = get_object_or_404(get_visible_divorces_qs(request.user), pk=kwargs.get('pk'))
+        action = request.POST.get('action')
+        reason = request.POST.get('rejection_reason', '').strip()
+
+        if declaration.status != DivorceDeclaration.Status.PENDING:
+            messages.error(request, "This declaration has already been reviewed.")
+            return redirect('registry:pending_list')
+
+        if action == 'confirm':
+            with transaction.atomic():
+                declaration.status = DivorceDeclaration.Status.CONFIRMED
+                declaration.confirmed_at = timezone.now()
+                declaration.reviewed_by = request.user
+
+                # Link citizen profiles via NIC hash if present
+                if declaration.ex_husband_national_id:
+                    h = get_hash(declaration.ex_husband_national_id)
+                    citizen = Citizen.objects.filter(national_id_hash=h).first()
+                    if citizen:
+                        declaration.ex_husband_citizen = citizen
+
+                if declaration.ex_wife_national_id:
+                    h = get_hash(declaration.ex_wife_national_id)
+                    citizen = Citizen.objects.filter(national_id_hash=h).first()
+                    if citizen:
+                        declaration.ex_wife_citizen = citizen
+
+                declaration.save()
+                AuditLog.objects.create(
+                    user=request.user,
+                    action=AuditLog.Action.APPROVE,
+                    model_name="DivorceDeclaration",
+                    record_id=str(declaration.id),
+                    details=f"Confirmed divorce declaration {declaration.declaration_number}.",
+                    ip_address=_get_client_ip(request)
+                )
+            messages.success(request, f"Divorce {declaration.declaration_number} confirmed. Certificate is now available.")
+
+        elif action == 'reject':
+            if not reason:
+                messages.error(request, "A reason is required to reject a declaration.")
+                return redirect('registry:pending_list')
+            declaration.status = DivorceDeclaration.Status.REJECTED
+            declaration.rejection_reason = reason
+            declaration.reviewed_by = request.user
+            declaration.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action=AuditLog.Action.REJECT,
+                model_name="DivorceDeclaration",
+                record_id=str(declaration.id),
+                details=f"Rejected divorce declaration {declaration.declaration_number}: {reason}",
+                ip_address=_get_client_ip(request)
+            )
+            messages.warning(request, f"Divorce declaration {declaration.declaration_number} rejected.")
+
+        return redirect('registry:pending_list')
+
+
+class DivorceCertificatePDFView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        declaration = get_object_or_404(get_visible_divorces_qs(request.user), pk=kwargs.get('pk'))
+        if declaration.status != DivorceDeclaration.Status.CONFIRMED:
+            return HttpResponseForbidden("Certificate is not available. The declaration must be confirmed first.")
+        pdf_buffer = generate_divorce_certificate_pdf(declaration)
+        AuditLog.objects.create(
+            user=request.user,
+            action=AuditLog.Action.EXPORT,
+            model_name="DivorceCertificate",
+            record_id=str(declaration.id),
+            details=f"Downloaded divorce certificate for {declaration.declaration_number}.",
+            ip_address=_get_client_ip(request)
+        )
+        filename = f"Divorce_Certificate_{declaration.declaration_number}.pdf"
         return FileResponse(pdf_buffer, as_attachment=False, content_type='application/pdf', filename=filename)
 
 
