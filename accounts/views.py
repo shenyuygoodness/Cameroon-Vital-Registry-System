@@ -64,6 +64,19 @@ def _initiate_mfa(request, user):
     to the verification page.  The redirect happens regardless of whether the
     email succeeds — if it failed the user can hit 'Resend Code' on the next page.
     """
+    if getattr(settings, 'DISABLE_MFA', False):
+        from registry.models import AuditLog
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        AuditLog.objects.create(
+            user=user,
+            action=AuditLog.Action.LOGIN,
+            model_name='User',
+            record_id=str(user.pk),
+            details=f"Successful login (MFA bypassed/disabled) for {user.username}.",
+            ip_address=_get_client_ip(request),
+        )
+        return redirect(settings.LOGIN_REDIRECT_URL)
+
     otp, _token = MFAToken.generate_for_user(user)
     request.session['mfa_pending_user_id'] = user.pk
     request.session['mfa_pending_backend'] = 'django.contrib.auth.backends.ModelBackend'

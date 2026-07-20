@@ -26,6 +26,7 @@ env = environ.Env(
     SESSION_COOKIE_SECURE=(bool, True),
     CSRF_COOKIE_SECURE=(bool, True),
     SECURE_SSL_REDIRECT=(bool, True),
+    DISABLE_MFA=(bool, False),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -114,9 +115,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'clvrs_project.wsgi.application'
 
 # Database Configuration
-DATABASES = {
-    'default': env.db('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-}
+if _TESTING:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': env.db('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
@@ -229,6 +238,9 @@ PASSWORD_RESET_TIMEOUT = 43200
 
 # ── MFA OTP expiry (10 minutes) ──
 MFA_OTP_EXPIRY_SECONDS = 600
+
+# ── Disable MFA (for testing/temporary bypass) ──
+DISABLE_MFA = True if _TESTING else env('DISABLE_MFA')
 
 # Crispy Forms Config
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'

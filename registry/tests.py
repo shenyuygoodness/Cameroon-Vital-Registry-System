@@ -10,7 +10,7 @@ from registry.forms import CitizenForm
 class CLVRSTests(TestCase):
     def setUp(self):
         # Locations
-        self.region = Region.objects.create(name="Center Region", code="CE")
+        self.region, _ = Region.objects.get_or_create(code="CE", defaults={"name": "Center Region"})
         self.division = Division.objects.create(name="Mfoundi Division", region=self.region)
         self.subdivision_y1 = Subdivision.objects.create(name="Yaoundé I", division=self.division)
         self.subdivision_y2 = Subdivision.objects.create(name="Yaoundé II", division=self.division)
@@ -47,9 +47,9 @@ class CLVRSTests(TestCase):
             row = cursor.fetchone()
             raw_nic = row[0]
         
-        # Verify it's not plaintext '123456789' and starts with 'gAAAAA' (Fernet prefix)
+        # Verify it's not plaintext '123456789' and starts with 'v2:' (AES-GCM prefix)
         self.assertNotEqual(raw_nic, "123456789")
-        self.assertTrue(raw_nic.startswith("gAAAAA"))
+        self.assertTrue(raw_nic.startswith("v2:"))
         
         # Verify decrypt works
         decrypted = EncryptionService.decrypt(raw_nic)
@@ -112,9 +112,9 @@ class CLVRSTests(TestCase):
         # 3. Child (10 years old) without NIC but with Photo -> Valid
         from django.core.files.uploadedfile import SimpleUploadedFile
         mock_photo = SimpleUploadedFile(
-            name='child_photo.gif',
+            name='child_photo.png',
             content=b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x4c\x01\x00\x3b',
-            content_type='image/gif'
+            content_type='image/png'
         )
         data_child_no_nic = {
             'first_name': 'Child',
